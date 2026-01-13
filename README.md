@@ -1,5 +1,5 @@
 # Tecnologias
 
-- [] Laravel
-- [] Mysql
-- [] Redis
+- Laravel
+- Mysql
+- Redis
