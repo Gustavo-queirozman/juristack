@@ -113,7 +113,17 @@
         </button>
     </form>
 
-    <div id="resultados" class="mt-4"></div>
+    <div class="row">
+        <div class="col-md-8">
+            <div id="resultados" class="mt-4"></div>
+        </div>
+        <div class="col-md-4">
+            <h5 class="mt-4">Monitorados</h5>
+            <div id="monitored-list" class="list-group"></div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index:11000"></div>
 
     <script>
         (function () {
@@ -123,6 +133,54 @@
             const url = '{{ route('datajud.api.search') }}';
             const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
             const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '{{ csrf_token() }}';
+
+            const monitoredKey = 'datajud_monitored_v1';
+            const monitorIntervals = {};
+
+            function loadMonitored() {
+                try { return JSON.parse(localStorage.getItem(monitoredKey) || '{}'); } catch(e) { return {}; }
+            }
+
+            function saveMonitored(map) { localStorage.setItem(monitoredKey, JSON.stringify(map)); }
+
+            function fmtDate(d) {
+                if (!d) return '';
+                try {
+                    const dt = new Date(d);
+                    return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(dt);
+                } catch(e) { return d; }
+            }
+
+            function mapStatusFromMovement(mov) {
+                if (!mov || !mov.nome) return 'Desconhecido';
+                const name = mov.nome.toLowerCase();
+                if (name.includes('sentença') || name.includes('julgado')) return 'Julgado';
+                if (name.includes('decisão') || name.includes('decis')) return 'Decisão';
+                if (name.includes('audiencia') || name.includes('audiência')) return 'Audiência';
+                if (name.includes('conclus') || name.includes('conclusão')) return 'Concluso';
+                if (name.includes('distribui') || name.includes('sorteio')) return 'Distribuído';
+                if (name.includes('arquivado') || name.includes('arquiv')) return 'Arquivado';
+                if (name.includes('petição') || name.includes('peticao') || name.includes('petição')) return 'Petição';
+                return mov.nome;
+            }
+
+            function showToast(title, message) {
+                const id = 'toast-' + Date.now();
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = 'toast align-items-center text-bg-light border';
+                toast.id = id;
+                toast.setAttribute('role', 'alert');
+                toast.setAttribute('aria-live', 'assertive');
+                toast.setAttribute('aria-atomic', 'true');
+                toast.innerHTML = `<div class="d-flex">
+                    <div class="toast-body"><strong>${title}</strong><div>${message}</div></div>
+                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>`;
+                container.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast, { delay: 8000 });
+                bsToast.show();
+            }
 
             function renderHits(hits) {
                 resultados.innerHTML = '';
@@ -165,9 +223,10 @@
                     const body = document.createElement('div');
                     body.className = 'card-body';
 
+                    const status = mapStatusFromMovement(lastMovement);
                     const meta = document.createElement('p');
                     meta.className = 'card-text';
-                    meta.innerHTML = '<strong>Classe:</strong> ' + classe + ' &nbsp; <strong>Atualizado:</strong> ' + updatedAt;
+                    meta.innerHTML = '<strong>Classe:</strong> ' + classe + ' &nbsp; <strong>Status:</strong> ' + status + ' &nbsp; <strong>Atualizado:</strong> ' + fmtDate(updatedAt);
 
                     const partiesDiv = document.createElement('div');
                     partiesDiv.className = 'mb-2';
@@ -179,7 +238,9 @@
                     partiesDiv.innerHTML = partiesHtml || '<em>Sem informações de partes</em>';
 
                     const movementDiv = document.createElement('div');
-                    movementDiv.innerHTML = '<strong>Último movimento:</strong> ' + (lastMovementText || '<em>Nenhum</em>');
+                    const recent = (source.movimentos || []).slice(-5).reverse();
+                    const recentHtml = recent.map(m => '<div><small class="text-muted">' + fmtDate(m.dataHora || m.data || '') + '</small> — ' + (m.nome || m.descricao || '') + '</div>').join('');
+                    movementDiv.innerHTML = '<strong>Últimos movimentos:</strong><div>' + (recentHtml || '<em>Nenhum</em>') + '</div>';
 
                     const actionsDiv = document.createElement('div');
                     actionsDiv.className = 'mt-2';
@@ -210,59 +271,149 @@
                     const refreshBtn = badge.querySelector('[data-action="refresh"]');
                     const monitorBtn = badge.querySelector('[data-action="monitor"]');
 
-                    let monitorInterval = null;
-
                     refreshBtn.addEventListener('click', function () {
-                        fetchSingleAndUpdate(idx, tribunal, numero, card);
+                        fetchSingleAndUpdate(idx, tribunal, numero, card, true);
                     });
 
+                    // monitor button toggles persistent monitoring
+                    const monitored = loadMonitored();
+                    const key = tribunal + '::' + numero;
+                    if (monitored[key]) {
+                        monitorBtn.textContent = 'Parar';
+                        card.classList.add('border-success');
+                    }
+
                     monitorBtn.addEventListener('click', function () {
-                        if (monitorInterval) {
-                            clearInterval(monitorInterval);
-                            monitorInterval = null;
+                        const map = loadMonitored();
+                        if (map[key]) {
+                            // stop
+                            clearMonitorInterval(key);
+                            delete map[key];
+                            saveMonitored(map);
                             monitorBtn.textContent = 'Monitorar';
                             card.classList.remove('border-success');
+                            renderMonitoredList();
                             return;
                         }
 
-                        // start polling every 15 seconds
+                        map[key] = { tribunal, numero, lastSignature: lastMovementText };
+                        saveMonitored(map);
                         monitorBtn.textContent = 'Parar';
                         card.classList.add('border-success');
-                        fetchSingleAndUpdate(idx, tribunal, numero, card);
-                        monitorInterval = setInterval(() => {
-                            fetchSingleAndUpdate(idx, tribunal, numero, card);
-                        }, 15000);
+                        startMonitorFor(key, map[key], card);
+                        renderMonitoredList();
                     });
                 });
 
                 resultados.appendChild(container);
             }
 
-            function fetchSingleAndUpdate(idx, tribunal, numero, card) {
+            function fetchSingleAndUpdate(idx, tribunal, numero, card, notifyOnChange = false) {
                 const payload = { tribunal: tribunal, numero_processo: numero };
-                fetch('{{ url('/api/datajud/search') }}', {
+                return fetch('{{ url('/api/datajud/search') }}', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 }).then(r => r.json())
                   .then(json => {
                       const hits = (json && json.hits && json.hits.hits) ? json.hits.hits : [];
-                      if (hits.length === 0) return;
+                      if (hits.length === 0) return null;
                       const hit = hits[0];
                       const src = hit._source || {};
                       const lastMovement = (src.movimentos && src.movimentos.length) ? src.movimentos[src.movimentos.length - 1] : null;
                       const movementText = lastMovement ? (lastMovement.nome + (lastMovement.dataHora ? ' — ' + lastMovement.dataHora : '')) : '';
                       const updatedAt = src.dataHoraUltimaAtualizacao || src.dataHora || '';
                       const meta = card.querySelector('.card-text');
-                      if (meta) meta.innerHTML = '<strong>Classe:</strong> ' + ((src.classe && src.classe.nome) ? src.classe.nome : (src.classe||'')) + ' &nbsp; <strong>Atualizado:</strong> ' + updatedAt;
-                      const movementDiv = card.querySelector('div');
-                      if (movementDiv) {
-                          const md = card.querySelectorAll('.card-body > div')[1];
-                          if (md) md.innerHTML = '<strong>Último movimento:</strong> ' + (movementText || '<em>Nenhum</em>');
-                      }
+                      if (meta) meta.innerHTML = '<strong>Classe:</strong> ' + ((src.classe && src.classe.nome) ? src.classe.nome : (src.classe||'')) + ' &nbsp; <strong>Status:</strong> ' + mapStatusFromMovement(lastMovement) + ' &nbsp; <strong>Atualizado:</strong> ' + fmtDate(updatedAt);
+                      const md = card.querySelectorAll('.card-body > div')[1];
+                      if (md) md.innerHTML = '<strong>Últimos movimentos:</strong><div>' + ((src.movimentos||[]).slice(-5).reverse().map(m=>'<div><small class="text-muted">'+fmtDate(m.dataHora||m.data||'')+'</small> — '+(m.nome||m.descricao||'')+'</div>').join('') || '<em>Nenhum</em>') + '</div>';
+
+                      return { hit, src, movementText };
                   })
-                  .catch(err => console.error('Refresh error', err));
+                  .catch(err => { console.error('Refresh error', err); return null; });
             }
+
+            function startMonitorFor(key, item, card) {
+                // avoid duplicate intervals
+                if (monitorIntervals[key]) return;
+                // immediate run
+                fetchSingleAndUpdate(null, item.tribunal, item.numero, card, true).then(res => {
+                    if (res) {
+                        const map = loadMonitored();
+                        map[key] = map[key] || item;
+                        map[key].lastSignature = res.movementText || '';
+                        saveMonitored(map);
+                    }
+                });
+
+                monitorIntervals[key] = setInterval(() => {
+                    const map = loadMonitored();
+                    const current = map[key];
+                    if (!current) { clearMonitorInterval(key); return; }
+                    fetchSingleAndUpdate(null, current.tribunal, current.numero, card, true).then(res => {
+                        if (!res) return;
+                        const sig = res.movementText || '';
+                        if (sig !== (current.lastSignature || '')) {
+                            // changed
+                            current.lastSignature = sig;
+                            saveMonitored(map);
+                            showToast('Processo atualizado', `${current.numero} — ${current.tribunal}: ${sig}`);
+                            // update card UI
+                            const meta = card.querySelector('.card-text');
+                            if (meta) meta.innerHTML = '<strong>Classe:</strong> ' + ((res.src.classe && res.src.classe.nome) ? res.src.classe.nome : (res.src.classe||'')) + ' &nbsp; <strong>Status:</strong> ' + mapStatusFromMovement(res.src.movimentos && res.src.movimentos.slice(-1)[0]) + ' &nbsp; <strong>Atualizado:</strong> ' + fmtDate(res.src.dataHoraUltimaAtualizacao || res.src.dataHora || '');
+                            const md = card.querySelectorAll('.card-body > div')[1];
+                            if (md) md.innerHTML = '<strong>Últimos movimentos:</strong><div>' + ((res.src.movimentos||[]).slice(-5).reverse().map(m=>'<div><small class="text-muted">'+fmtDate(m.dataHora||m.data||'')+'</small> — '+(m.nome||m.descricao||'')+'</div>').join('') || '<em>Nenhum</em>') + '</div>';
+                        }
+                    });
+                }, 15000);
+            }
+
+            function clearMonitorInterval(key) {
+                if (monitorIntervals[key]) {
+                    clearInterval(monitorIntervals[key]);
+                    delete monitorIntervals[key];
+                }
+            }
+
+            function renderMonitoredList() {
+                const list = document.getElementById('monitored-list');
+                const map = loadMonitored();
+                list.innerHTML = '';
+                Object.keys(map).forEach(k => {
+                    const it = map[k];
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `<div><strong>${it.numero}</strong><div class="small text-muted">${it.tribunal}</div></div>`;
+                    const stopBtn = document.createElement('button');
+                    stopBtn.className = 'btn btn-sm btn-outline-danger';
+                    stopBtn.textContent = 'Parar';
+                    stopBtn.addEventListener('click', () => {
+                        const m = loadMonitored(); delete m[k]; saveMonitored(m); clearMonitorInterval(k); renderMonitoredList();
+                        // also update buttons in cards
+                        document.querySelectorAll('[data-action="monitor"]').forEach(b => {
+                            const parent = b.closest('.card');
+                            if (!parent) return;
+                        });
+                    });
+                    item.appendChild(stopBtn);
+                    list.appendChild(item);
+                });
+            }
+
+            function startAllMonitors() {
+                const map = loadMonitored();
+                // find cards for each monitored item; if not present, create hidden polls
+                Object.keys(map).forEach(k => {
+                    const it = map[k];
+                    // try to find existing card by matching number
+                    const card = Array.from(document.querySelectorAll('.card')).find(c => c.querySelector('strong') && c.querySelector('strong').textContent.includes(it.numero));
+                    startMonitorFor(k, it, card || document.createElement('div'));
+                });
+                renderMonitoredList();
+            }
+
+            // initialize monitors from storage
+            startAllMonitors();
 
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
