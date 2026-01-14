@@ -24,11 +24,20 @@ class DataJudController extends Controller
 
         $tribunal = $request->tribunal;
 
-        if ($request->filled('numero_processo')) {
-            $numero = $this->service->normalizeProcessNumber($request->numero_processo);
-            $resp = $this->service->searchByProcess($tribunal, $numero, 0, 20);
+        if ($tribunal === 'ALL') {
+            if ($request->filled('numero_processo')) {
+                $numero = $this->service->normalizeProcessNumber($request->numero_processo);
+                $resp = $this->service->searchAll('numero', $numero, 0, 20);
+            } else {
+                $resp = $this->service->searchAll('advogado', $request->nome_advogado, 0, 20);
+            }
         } else {
-            $resp = $this->service->searchByLawyer($tribunal, $request->nome_advogado, 0, 20);
+            if ($request->filled('numero_processo')) {
+                $numero = $this->service->normalizeProcessNumber($request->numero_processo);
+                $resp = $this->service->searchByProcess($tribunal, $numero, 0, 20);
+            } else {
+                $resp = $this->service->searchByLawyer($tribunal, $request->nome_advogado, 0, 20);
+            }
         }
 
         if (empty($resp)) {
@@ -54,11 +63,20 @@ class DataJudController extends Controller
         $from = $request->get('from', 0);
         $size = $request->get('size', 10);
 
-        if ($request->filled('numero_processo')) {
-            $numero = $this->service->normalizeProcessNumber($request->numero_processo);
-            $resp = $this->service->searchByProcess($tribunal, $numero, $from, $size);
+        if ($tribunal === 'ALL') {
+            if ($request->filled('numero_processo')) {
+                $numero = $this->service->normalizeProcessNumber($request->numero_processo);
+                $resp = $this->service->searchAll('numero', $numero, $from, $size);
+            } else {
+                $resp = $this->service->searchAll('advogado', $request->nome_advogado, $from, $size);
+            }
         } else {
-            $resp = $this->service->searchByLawyer($tribunal, $request->nome_advogado, $from, $size);
+            if ($request->filled('numero_processo')) {
+                $numero = $this->service->normalizeProcessNumber($request->numero_processo);
+                $resp = $this->service->searchByProcess($tribunal, $numero, $from, $size);
+            } else {
+                $resp = $this->service->searchByLawyer($tribunal, $request->nome_advogado, $from, $size);
+            }
         }
 
         if (empty($resp)) {

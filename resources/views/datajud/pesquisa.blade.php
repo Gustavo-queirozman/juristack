@@ -14,6 +14,7 @@
             </label>
             <select name="tribunal" id="tribunal" class="form-select" required>
                 <option value="">Selecione o tribunal</option>
+                <option value="ALL">Todos os tribunais</option>
 
                 <optgroup label="Supremos / Superiores">
                     <option value="STF">STF - Supremo Tribunal Federal</option>
