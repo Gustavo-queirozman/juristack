@@ -124,6 +124,21 @@
     </div>
 
     <div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index:11000"></div>
+        <!-- JSON modal -->
+        <div class="modal fade" id="jsonModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">JSON do Processo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body"><pre id="jsonModalContent" style="white-space:pre-wrap;word-break:break-word"></pre></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     <script>
         (function () {
@@ -228,12 +243,29 @@
                     meta.className = 'card-text';
                     meta.innerHTML = '<strong>Classe:</strong> ' + classe + ' &nbsp; <strong>Status:</strong> ' + status + ' &nbsp; <strong>Atualizado:</strong> ' + fmtDate(updatedAt);
 
+                    // additional info table
+                    const infoTable = document.createElement('table');
+                    infoTable.className = 'table table-sm mt-2 mb-2';
+                    const orgao = (source.orgaoJulgador && source.orgaoJulgador.nome) ? source.orgaoJulgador.nome : (source.orgaoJulgador || '');
+                    const ajuizamento = source.dataAjuizamento || source.dataAjuizamentoFormat || '';
+                    const sistema = (source.sistema && source.sistema.nome) ? source.sistema.nome : (source.sistema || '');
+                    const formato = (source.formato && source.formato.nome) ? source.formato.nome : (source.formato || '');
+                    const sigilo = source.nivelSigilo ?? source.nivel_sigilo ?? (source.nivel ? source.nivel : '');
+                    const movCount = (source.movimentos || []).length;
+                    infoTable.innerHTML = `<tbody>
+                        <tr><th class="w-25">Juízo/Órgão</th><td>${orgao}</td></tr>
+                        <tr><th>Data de ajuizamento</th><td>${fmtDate(ajuizamento)}</td></tr>
+                        <tr><th>Sistema / Formato</th><td>${sistema} / ${formato}</td></tr>
+                        <tr><th>Nível de sigilo</th><td>${sigilo}</td></tr>
+                        <tr><th>Movimentações</th><td>${movCount}</td></tr>
+                    </tbody>`;
+
                     const partiesDiv = document.createElement('div');
                     partiesDiv.className = 'mb-2';
                     const partes = source.partes || [];
                     const partiesHtml = partes.map(p => {
-                        const nomes = (p.advogados || []).map(a => a.nome).filter(Boolean).join(', ');
-                        return '<div><strong>Parte:</strong> ' + (p.nome || p.nomeParte || '') + (nomes ? ' <small class="text-muted">(Adv: ' + nomes + ')</small>' : '') + '</div>';
+                        const nomes = (p.advogados || []).map(a => (a.nome || '') + (a.oab ? ' (OAB: '+a.oab+')' : '')).filter(Boolean).join('; ');
+                        return '<div><strong>Parte:</strong> ' + (p.nome || p.nomeParte || '') + (p.tipoParte ? ' <small class="text-muted">('+p.tipoParte+')</small>' : '') + (nomes ? ' <div class="small text-muted">Advogados: ' + nomes + '</div>' : '') + '</div>';
                     }).join('');
                     partiesDiv.innerHTML = partiesHtml || '<em>Sem informações de partes</em>';
 
@@ -244,20 +276,26 @@
 
                     const actionsDiv = document.createElement('div');
                     actionsDiv.className = 'mt-2';
-                    const viewBtn = document.createElement('a');
-                    viewBtn.className = 'btn btn-sm btn-secondary me-2';
-                    viewBtn.textContent = 'Abrir no DataJud';
-                    viewBtn.target = '_blank';
-                    // if external link available
-                    if (source.id) {
-                        viewBtn.href = '#';
-                    } else {
-                        viewBtn.href = '#';
-                    }
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'btn btn-sm btn-outline-secondary me-2';
+                    copyBtn.textContent = 'Copiar número';
+                    copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(numero); showToast('Copiado', 'Número do processo copiado para a área de transferência'); });
 
-                    actionsDiv.appendChild(viewBtn);
+                    const jsonBtn = document.createElement('button');
+                    jsonBtn.className = 'btn btn-sm btn-outline-info me-2';
+                    jsonBtn.textContent = 'Ver JSON';
+                    jsonBtn.addEventListener('click', () => {
+                        const pre = document.getElementById('jsonModalContent');
+                        pre.textContent = JSON.stringify(source, null, 2);
+                        const modal = new bootstrap.Modal(document.getElementById('jsonModal'));
+                        modal.show();
+                    });
+
+                    actionsDiv.appendChild(copyBtn);
+                    actionsDiv.appendChild(jsonBtn);
 
                     body.appendChild(meta);
+                    body.appendChild(infoTable);
                     body.appendChild(partiesDiv);
                     body.appendChild(movementDiv);
                     body.appendChild(actionsDiv);
