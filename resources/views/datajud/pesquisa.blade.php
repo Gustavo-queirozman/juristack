@@ -15,17 +15,61 @@
             <select name="tribunal" id="tribunal" class="form-select" required>
                 <option value="">Selecione o tribunal</option>
 
-                {{-- Exemplo de tribunais --}}
-                <option value="STF">STF - Supremo Tribunal Federal</option>
-                <option value="STJ">STJ - Superior Tribunal de Justiça</option>
-                <option value="TST">TST - Tribunal Superior do Trabalho</option>
-                <option value="TRF1">TRF 1ª Região</option>
-                <option value="TRF2">TRF 2ª Região</option>
-                <option value="TRF3">TRF 3ª Região</option>
-                <option value="TRF4">TRF 4ª Região</option>
-                <option value="TRF5">TRF 5ª Região</option>
-                <option value="TJSP">TJSP - Tribunal de Justiça de SP</option>
-                <option value="TJRJ">TJRJ - Tribunal de Justiça do RJ</option>
+                <optgroup label="Supremos / Superiores">
+                    <option value="STF">STF - Supremo Tribunal Federal</option>
+                    <option value="STJ">STJ - Superior Tribunal de Justiça</option>
+                    <option value="TST">TST - Tribunal Superior do Trabalho</option>
+                </optgroup>
+
+                <optgroup label="TRFs">
+                    <option value="TRF1">TRF1 - 1ª Região</option>
+                    <option value="TRF2">TRF2 - 2ª Região</option>
+                    <option value="TRF3">TRF3 - 3ª Região</option>
+                    <option value="TRF4">TRF4 - 4ª Região</option>
+                    <option value="TRF5">TRF5 - 5ª Região</option>
+                    <option value="TRF6">TRF6 - 6ª Região</option>
+                </optgroup>
+
+                <optgroup label="Tribunais de Justiça (Estados)">
+                    <option value="TJAC">TJAC - Acre</option>
+                    <option value="TJAL">TJAL - Alagoas</option>
+                    <option value="TJAP">TJAP - Amapá</option>
+                    <option value="TJAM">TJAM - Amazonas</option>
+                    <option value="TJBA">TJBA - Bahia</option>
+                    <option value="TJCE">TJCE - Ceará</option>
+                    <option value="TJDFT">TJDFT - Distrito Federal</option>
+                    <option value="TJG" disabled>-- (use TJGO abaixo) --</option>
+                    <option value="TJES">TJES - Espírito Santo</option>
+                    <option value="TJGO">TJGO - Goiás</option>
+                    <option value="TJMA">TJMA - Maranhão</option>
+                    <option value="TJMT">TJMT - Mato Grosso</option>
+                    <option value="TJMS">TJMS - Mato Grosso do Sul</option>
+                    <option value="TJMG">TJMG - Minas Gerais</option>
+                    <option value="TJPB">TJPB - Paraíba</option>
+                    <option value="TJPA">TJPA - Pará</option>
+                    <option value="TJPR">TJPR - Paraná</option>
+                    <option value="TJPE">TJPE - Pernambuco</option>
+                    <option value="TJPI">TJPI - Piauí</option>
+                    <option value="TJRJ">TJRJ - Rio de Janeiro</option>
+                    <option value="TJRN">TJRN - Rio Grande do Norte</option>
+                    <option value="TJRS">TJRS - Rio Grande do Sul</option>
+                    <option value="TJRO">TJRO - Rondônia</option>
+                    <option value="TJRR">TJRR - Roraima</option>
+                    <option value="TJSC">TJSC - Santa Catarina</option>
+                    <option value="TJSP">TJSP - São Paulo</option>
+                    <option value="TJSE">TJSE - Sergipe</option>
+                    <option value="TJToc">TJTO - Tocantins</option>
+                </optgroup>
+
+            </select>
+        </div>
+
+        {{-- Tipo de Consulta --}}
+        <div class="mb-3">
+            <label for="tipo_consulta" class="form-label">Tipo de Consulta</label>
+            <select id="tipo_consulta" class="form-select">
+                <option value="numero">Número do Processo</option>
+                <option value="advogado">Nome do Advogado</option>
             </select>
         </div>
 
@@ -120,11 +164,14 @@
                 btn.disabled = true;
                 resultados.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>';
 
-                const data = {
-                    tribunal: document.getElementById('tribunal').value,
-                    numero_processo: document.getElementById('numero_processo').value,
-                    nome_advogado: document.getElementById('nome_advogado').value,
-                };
+                    const tipo = document.getElementById('tipo_consulta') ? document.getElementById('tipo_consulta').value : 'numero';
+                    const data = { tribunal: document.getElementById('tribunal').value };
+
+                    if (tipo === 'numero') {
+                        data.numero_processo = document.getElementById('numero_processo').value;
+                    } else if (tipo === 'advogado') {
+                        data.nome_advogado = document.getElementById('nome_advogado').value;
+                    }
 
                 fetch(url, {
                     method: 'POST',
@@ -146,6 +193,26 @@
                   })
                   .finally(() => btn.disabled = false);
             });
+
+            // Toggle visibility based on tipo_consulta
+            const tipoSelect = document.getElementById('tipo_consulta');
+            function toggleFields() {
+                const tipo = tipoSelect.value;
+                const numDiv = document.getElementById('numero_processo').closest('.mb-3');
+                const advDiv = document.getElementById('nome_advogado').closest('.mb-3');
+                if (tipo === 'numero') {
+                    numDiv.style.display = '';
+                    advDiv.style.display = 'none';
+                } else {
+                    numDiv.style.display = 'none';
+                    advDiv.style.display = '';
+                }
+            }
+
+            if (tipoSelect) {
+                tipoSelect.addEventListener('change', toggleFields);
+                toggleFields();
+            }
         })();
     </script>
     </form>
