@@ -2,7 +2,31 @@
 
 @section('content')
 <div class="container">
-    <h3 class="mb-4">Pesquisa de Processos - DataJud</h3>
+    <style>
+        /* DataJud UI enhancements */
+        .datajud-hero { margin-bottom: 1rem; display:flex; align-items:center; gap:1rem }
+        .datajud-hero h3 { margin:0; font-weight:700; color:#0b5ed7 }
+        .card.datajud-card { box-shadow: 0 6px 18px rgba(15,23,42,0.06); border-radius:8px; overflow:hidden }
+        .card.datajud-card .card-header { background: linear-gradient(90deg,#f8fafc,#ffffff); border-bottom:1px solid rgba(0,0,0,0.05); font-weight:600 }
+        .card.datajud-card .card-body { background:#fff }
+        .badge-tribunal { background:#eef2ff; color:#2a2a72; font-weight:600 }
+        #resultados .card { transition: transform .12s ease, box-shadow .12s ease }
+        #resultados .card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(15,23,42,0.08) }
+        #monitored-list .list-group-item { display:flex; align-items:center; justify-content:space-between }
+        #monitored-list .small { display:block }
+        .toast { border-radius:8px }
+        .table-sm th { width:30% }
+        .btn-monitor-active { background:#198754; color:#fff; border-color:#198754 }
+        .card .card-text strong { color:#444 }
+        pre#jsonModalContent { background:#0b1220; color:#dbeafe; padding:1rem; border-radius:6px }
+        @media (max-width:767px) {
+            #monitored-list { margin-top:1rem }
+        }
+    </style>
+    <div class="datajud-hero">
+        <h3>Pesquisa de Processos - DataJud</h3>
+        <div class="text-muted">Busque por número, advogado ou monitore processos em tempo real</div>
+    </div>
 
     <form id="datajud-form" method="POST" action="#">
         @csrf
