@@ -4,7 +4,8 @@
 <div class="container">
     <h3 class="mb-4">Pesquisa de Processos - DataJud</h3>
 
-    <form method="GET" action="{{ route('datajud.pesquisar') }}">
+    <form id="datajud-form" method="POST" action="#">
+        @csrf
         
         {{-- Tribunal --}}
         <div class="mb-3">
@@ -62,9 +63,91 @@
             Preencha <strong>o número do processo</strong> ou <strong>o nome do advogado</strong>.
         </div>
 
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" id="btn-pesquisar" class="btn btn-primary">
             Pesquisar
         </button>
+    </form>
+
+    <div id="resultados" class="mt-4"></div>
+
+    <script>
+        (function () {
+            const form = document.getElementById('datajud-form');
+            const btn = document.getElementById('btn-pesquisar');
+            const resultados = document.getElementById('resultados');
+            const url = '{{ route('datajud.api.search') }}';
+            const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '{{ csrf_token() }}';
+
+            function renderHits(hits) {
+                resultados.innerHTML = '';
+                if (!hits || hits.length === 0) {
+                    resultados.innerHTML = '<div class="alert alert-warning">Nenhum resultado encontrado.</div>';
+                    return;
+                }
+
+                const list = document.createElement('div');
+
+                hits.forEach(hit => {
+                    const card = document.createElement('div');
+                    card.className = 'card mb-2';
+                    const body = document.createElement('div');
+                    body.className = 'card-body';
+
+                    const source = hit._source || hit._source || {};
+                    const numero = source.numeroProcesso || source.numero_processo || hit._id || '';
+                    const title = source.titulo || source.assunto || '';
+
+                    const h5 = document.createElement('h5');
+                    h5.className = 'card-title';
+                    h5.textContent = numero + (title ? ' — ' + title : '');
+
+                    const pre = document.createElement('pre');
+                    pre.style.whiteSpace = 'pre-wrap';
+                    pre.textContent = JSON.stringify(source, null, 2);
+
+                    body.appendChild(h5);
+                    body.appendChild(pre);
+                    card.appendChild(body);
+                    list.appendChild(card);
+                });
+
+                resultados.appendChild(list);
+            }
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                btn.disabled = true;
+                resultados.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>';
+
+                const data = {
+                    tribunal: document.getElementById('tribunal').value,
+                    numero_processo: document.getElementById('numero_processo').value,
+                    nome_advogado: document.getElementById('nome_advogado').value,
+                };
+
+                fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                }).then(r => r.json())
+                  .then(json => {
+                      const hits = (json && json.hits && json.hits.hits) ? json.hits.hits : [];
+                      renderHits(hits);
+                  })
+                  .catch(err => {
+                      resultados.innerHTML = '<div class="alert alert-danger">Erro ao consultar o DataJud.</div>';
+                      console.error(err);
+                  })
+                  .finally(() => btn.disabled = false);
+            });
+        })();
+    </script>
     </form>
 </div>
 @endsection

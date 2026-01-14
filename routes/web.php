@@ -10,8 +10,10 @@ use App\Http\Controllers\TestController;
 use App\Http\Controllers\DataJudController;
 
 Route::get('/datajud/pesquisa', fn () => view('datajud.pesquisa'));
-Route::get('/datajud/resultado', [DataJudController::class, 'pesquisar'])
-    ->name('datajud.pesquisar');
+
+// API route for AJAX/internal requests
+Route::post('/datajud/search', [DataJudController::class, 'apiSearch'])
+    ->name('datajud.api.search');
 
 
 Route::get('/', function () {
