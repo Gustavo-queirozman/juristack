@@ -9,11 +9,13 @@ class DataJudService
 {
     protected $baseUrl;
     protected $token;
+    protected $debug = false;
 
     public function __construct()
     {
         $this->baseUrl = config('services.datajud.base_url') ?: 'https://api-publica.datajud.cnj.jus.br';
         $this->token = config('services.datajud.token');
+        $this->debug = config('services.datajud.debug', env('DATAJUD_DEBUG', false));
     }
 
     protected function endpointForTribunal(string $tribunal): string
@@ -128,6 +130,10 @@ class DataJudService
             ]
         ];
 
+        if ($this->debug) {
+            Log::info('DataJud request (process)', ['endpoint' => $endpoint, 'body' => $body]);
+        }
+
         try {
             $resp = Http::withHeaders($this->headers())->post($endpoint, $body);
         } catch (\Exception $e) {
@@ -140,6 +146,10 @@ class DataJudService
             return null;
         }
 
+        if ($this->debug) {
+            Log::info('DataJud response (process)', ['status' => $resp->status(), 'body' => $resp->body()]);
+        }
+
         return $resp->json();
     }
 
@@ -147,14 +157,21 @@ class DataJudService
     {
         $endpoint = $this->endpointForTribunal($tribunal);
 
+        // Use multi_match with fuzziness and phrase_prefix to increase recall for names
         $body = [
             'from' => $from,
             'size' => $size,
             'query' => [
-                'match' => [
-                    'partes.advogados.nome' => [
-                        'query' => $nome,
-                        'operator' => 'and'
+                'multi_match' => [
+                    'query' => $nome,
+                    'type' => 'phrase_prefix',
+                    'fuzziness' => 'AUTO',
+                    'operator' => 'and',
+                    'fields' => [
+                        'partes.advogados.nome^3',
+                        'partes.advogados.nomeCompleto',
+                        'partes.advogados.nomeAdvogado',
+                        'partes.advogados.*'
                     ]
                 ]
             ]
@@ -172,6 +189,26 @@ class DataJudService
             return null;
         }
 
+        if ($this->debug) {
+            Log::info('DataJud response (lawyer)', ['status' => $resp->status(), 'body' => $resp->body()]);
+        }
+
         return $resp->json();
+    }
+
+    /**
+     * Debug helper to run a search and return raw response (used by debug endpoint).
+     */
+    public function debugSearch(string $tribunal, string $tipo, string $valor, int $from = 0, int $size = 10)
+    {
+        if ($tribunal === 'ALL') {
+            return $this->searchAll($tipo, $valor, $from, $size);
+        }
+
+        if ($tipo === 'numero') {
+            return $this->searchByProcess($tribunal, $valor, $from, $size);
+        }
+
+        return $this->searchByLawyer($tribunal, $valor, $from, $size);
     }
 }
