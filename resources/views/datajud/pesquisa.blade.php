@@ -131,33 +131,137 @@
                     return;
                 }
 
-                const list = document.createElement('div');
+                const container = document.createElement('div');
 
-                hits.forEach(hit => {
+                hits.forEach((hit, idx) => {
+                    const source = hit._source || {};
+                    const numero = source.numeroProcesso || source.numero_processo || hit._id || '';
+                    const tribunal = hit._tribunal || source.tribunal || '';
+                    const classe = (source.classe && source.classe.nome) ? source.classe.nome : (source.classe || '');
+                    const assunto = (source.assuntos && source.assuntos.length) ? source.assuntos.map(a=>a.nome).join(', ') : (source.assunto || '');
+
+                    const lastMovement = (source.movimentos && source.movimentos.length) ? source.movimentos[source.movimentos.length - 1] : null;
+                    const lastMovementText = lastMovement ? (lastMovement.nome + (lastMovement.dataHora ? ' — ' + lastMovement.dataHora : '')) : '';
+                    const updatedAt = source.dataHoraUltimaAtualizacao || source.dataHora || '';
+
                     const card = document.createElement('div');
-                    card.className = 'card mb-2';
+                    card.className = 'card mb-3';
+                    card.id = 'result-card-' + idx;
+
+                    const header = document.createElement('div');
+                    header.className = 'card-header d-flex justify-content-between align-items-center';
+
+                    const title = document.createElement('div');
+                    title.innerHTML = '<strong>' + numero + '</strong>' + (assunto ? ' &mdash; ' + assunto : '');
+
+                    const badge = document.createElement('div');
+                    badge.innerHTML = '<span class="badge bg-secondary me-2">' + tribunal + '</span>' +
+                        '<button class="btn btn-sm btn-outline-primary me-1" data-action="refresh">Atualizar</button>' +
+                        '<button class="btn btn-sm btn-success" data-action="monitor">Monitorar</button>';
+
+                    header.appendChild(title);
+                    header.appendChild(badge);
+
                     const body = document.createElement('div');
                     body.className = 'card-body';
 
-                    const source = hit._source || hit._source || {};
-                    const numero = source.numeroProcesso || source.numero_processo || hit._id || '';
-                    const title = source.titulo || source.assunto || '';
+                    const meta = document.createElement('p');
+                    meta.className = 'card-text';
+                    meta.innerHTML = '<strong>Classe:</strong> ' + classe + ' &nbsp; <strong>Atualizado:</strong> ' + updatedAt;
 
-                    const h5 = document.createElement('h5');
-                    h5.className = 'card-title';
-                    h5.textContent = numero + (title ? ' — ' + title : '');
+                    const partiesDiv = document.createElement('div');
+                    partiesDiv.className = 'mb-2';
+                    const partes = source.partes || [];
+                    const partiesHtml = partes.map(p => {
+                        const nomes = (p.advogados || []).map(a => a.nome).filter(Boolean).join(', ');
+                        return '<div><strong>Parte:</strong> ' + (p.nome || p.nomeParte || '') + (nomes ? ' <small class="text-muted">(Adv: ' + nomes + ')</small>' : '') + '</div>';
+                    }).join('');
+                    partiesDiv.innerHTML = partiesHtml || '<em>Sem informações de partes</em>';
 
-                    const pre = document.createElement('pre');
-                    pre.style.whiteSpace = 'pre-wrap';
-                    pre.textContent = JSON.stringify(source, null, 2);
+                    const movementDiv = document.createElement('div');
+                    movementDiv.innerHTML = '<strong>Último movimento:</strong> ' + (lastMovementText || '<em>Nenhum</em>');
 
-                    body.appendChild(h5);
-                    body.appendChild(pre);
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'mt-2';
+                    const viewBtn = document.createElement('a');
+                    viewBtn.className = 'btn btn-sm btn-secondary me-2';
+                    viewBtn.textContent = 'Abrir no DataJud';
+                    viewBtn.target = '_blank';
+                    // if external link available
+                    if (source.id) {
+                        viewBtn.href = '#';
+                    } else {
+                        viewBtn.href = '#';
+                    }
+
+                    actionsDiv.appendChild(viewBtn);
+
+                    body.appendChild(meta);
+                    body.appendChild(partiesDiv);
+                    body.appendChild(movementDiv);
+                    body.appendChild(actionsDiv);
+
+                    card.appendChild(header);
                     card.appendChild(body);
-                    list.appendChild(card);
+
+                    container.appendChild(card);
+
+                    // attach behavior
+                    const refreshBtn = badge.querySelector('[data-action="refresh"]');
+                    const monitorBtn = badge.querySelector('[data-action="monitor"]');
+
+                    let monitorInterval = null;
+
+                    refreshBtn.addEventListener('click', function () {
+                        fetchSingleAndUpdate(idx, tribunal, numero, card);
+                    });
+
+                    monitorBtn.addEventListener('click', function () {
+                        if (monitorInterval) {
+                            clearInterval(monitorInterval);
+                            monitorInterval = null;
+                            monitorBtn.textContent = 'Monitorar';
+                            card.classList.remove('border-success');
+                            return;
+                        }
+
+                        // start polling every 15 seconds
+                        monitorBtn.textContent = 'Parar';
+                        card.classList.add('border-success');
+                        fetchSingleAndUpdate(idx, tribunal, numero, card);
+                        monitorInterval = setInterval(() => {
+                            fetchSingleAndUpdate(idx, tribunal, numero, card);
+                        }, 15000);
+                    });
                 });
 
-                resultados.appendChild(list);
+                resultados.appendChild(container);
+            }
+
+            function fetchSingleAndUpdate(idx, tribunal, numero, card) {
+                const payload = { tribunal: tribunal, numero_processo: numero };
+                fetch('{{ url('/api/datajud/search') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).then(r => r.json())
+                  .then(json => {
+                      const hits = (json && json.hits && json.hits.hits) ? json.hits.hits : [];
+                      if (hits.length === 0) return;
+                      const hit = hits[0];
+                      const src = hit._source || {};
+                      const lastMovement = (src.movimentos && src.movimentos.length) ? src.movimentos[src.movimentos.length - 1] : null;
+                      const movementText = lastMovement ? (lastMovement.nome + (lastMovement.dataHora ? ' — ' + lastMovement.dataHora : '')) : '';
+                      const updatedAt = src.dataHoraUltimaAtualizacao || src.dataHora || '';
+                      const meta = card.querySelector('.card-text');
+                      if (meta) meta.innerHTML = '<strong>Classe:</strong> ' + ((src.classe && src.classe.nome) ? src.classe.nome : (src.classe||'')) + ' &nbsp; <strong>Atualizado:</strong> ' + updatedAt;
+                      const movementDiv = card.querySelector('div');
+                      if (movementDiv) {
+                          const md = card.querySelectorAll('.card-body > div')[1];
+                          if (md) md.innerHTML = '<strong>Último movimento:</strong> ' + (movementText || '<em>Nenhum</em>');
+                      }
+                  })
+                  .catch(err => console.error('Refresh error', err));
             }
 
             form.addEventListener('submit', function (e) {
