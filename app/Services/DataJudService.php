@@ -157,21 +157,37 @@ class DataJudService
     {
         $endpoint = $this->endpointForTribunal($tribunal);
 
-        // Use multi_match with fuzziness and phrase_prefix to increase recall for names
+        // Combine a phrase_prefix clause (no fuzziness) with a best_fields fuzzy clause
+        $fields = [
+            'partes.advogados.nome^3',
+            'partes.advogados.nomeCompleto',
+            'partes.advogados.nomeAdvogado',
+            'partes.advogados.*'
+        ];
+
         $body = [
             'from' => $from,
             'size' => $size,
             'query' => [
-                'multi_match' => [
-                    'query' => $nome,
-                    'type' => 'phrase_prefix',
-                    'fuzziness' => 'AUTO',
-                    'operator' => 'and',
-                    'fields' => [
-                        'partes.advogados.nome^3',
-                        'partes.advogados.nomeCompleto',
-                        'partes.advogados.nomeAdvogado',
-                        'partes.advogados.*'
+                'bool' => [
+                    'should' => [
+                        [
+                            'multi_match' => [
+                                'query' => $nome,
+                                'type' => 'phrase_prefix',
+                                'operator' => 'and',
+                                'fields' => $fields,
+                            ]
+                        ],
+                        [
+                            'multi_match' => [
+                                'query' => $nome,
+                                'type' => 'best_fields',
+                                'fuzziness' => 'AUTO',
+                                'operator' => 'and',
+                                'fields' => $fields,
+                            ]
+                        ]
                     ]
                 ]
             ]
