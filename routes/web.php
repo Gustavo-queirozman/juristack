@@ -11,10 +11,13 @@ use App\Http\Controllers\DataJudController;
 
 Route::get('/datajud/pesquisa', fn () => view('datajud.pesquisa'));
 
+Route::get('/datajud/salvos', [DataJudController::class, 'salvos'])->name('datajud.salvos');
+
 // API route for AJAX/internal requests
 Route::post('/datajud/search', [DataJudController::class, 'apiSearch'])
     ->name('datajud.api.search');
 
+Route::post('/datajud/salvar', [DataJudController::class, 'salvar']);
 
 Route::get('/', function () {
     return redirect('/login');
@@ -31,3 +34,4 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+

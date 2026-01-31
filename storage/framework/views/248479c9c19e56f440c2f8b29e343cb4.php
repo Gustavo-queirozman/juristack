@@ -1,6 +1,4 @@
-@extends('layouts.app')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container">
     <style>
         .datajud-hero { margin-bottom: 1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem }
@@ -87,7 +85,7 @@
             const filterEl = document.getElementById('filter');
 
             const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
-            const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '{{ csrf_token() }}';
+            const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '<?php echo e(csrf_token()); ?>';
 
             function loadMonitored() {
                 try { return JSON.parse(localStorage.getItem(monitoredKey) || '{}'); }
@@ -139,7 +137,7 @@
             async function fetchProcesso(tribunal, numero) {
                 const payload = { tribunal, numero_processo: numero };
 
-                const r = await fetch('{{ url('/api/datajud/search') }}', {
+                const r = await fetch('<?php echo e(url('/api/datajud/search')); ?>', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -327,4 +325,6 @@
         })();
     </script>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /var/www/juristack/resources/views/datajud/monitorados.blade.php ENDPATH**/ ?>

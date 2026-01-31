@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\DataJudService;
-
+use App\Models\DatajudProcesso;
 class DataJudController extends Controller
 {
     protected $service;
@@ -13,6 +13,21 @@ class DataJudController extends Controller
     {
         $this->service = $service;
     }
+
+public function salvos()
+{
+    $processos = DatajudProcesso::with('assuntos')
+        ->where('user_id', auth()->id())
+        ->latest()
+        ->paginate(20);
+
+    return view('datajud.salvos', compact('processos'));
+}
+
+public function monitorados()
+{
+    return view('datajud.monitorados');
+}
 
     public function pesquisar(Request $request)
     {
@@ -106,4 +121,21 @@ class DataJudController extends Controller
 
         return response()->json($resp);
     }
+
+public function salvarProcesso(Request $request, DatajudPersistService $persist)
+{
+    $request->validate([
+        'tribunal' => 'required|string',
+        'source' => 'required|array',
+    ]);
+
+    $persist->salvarProcesso(
+        $request->source,
+        $request->tribunal,
+        auth()->id()
+    );
+
+    return response()->json(['ok' => true]);
+}
+
 }
