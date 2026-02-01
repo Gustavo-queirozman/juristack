@@ -1,5 +1,10 @@
 <?php
-// app/Services/DatajudPersistService.php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\DB;
+use App\Models\DatajudProcesso;
+
 class DatajudPersistService
 {
     public function salvarProcesso(array $source, string $tribunal, ?int $userId = null)

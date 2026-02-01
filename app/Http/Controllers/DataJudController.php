@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\DataJudService;
+use App\Services\DatajudPersistService;
 use App\Models\DatajudProcesso;
+use App\Models\ProcessoMonitor;
 class DataJudController extends Controller
 {
     protected $service;
@@ -129,13 +131,32 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
         'source' => 'required|array',
     ]);
 
-    $persist->salvarProcesso(
-        $request->source,
-        $request->tribunal,
-        auth()->id()
-    );
+    try {
+        // Salvar o processo
+        $processo = $persist->salvarProcesso(
+            $request->source,
+            $request->tribunal,
+            auth()->id()
+        );
 
-    return response()->json(['ok' => true]);
+        // Criar monitor para este processo
+        ProcessoMonitor::updateOrCreate(
+            [
+                'user_id' => auth()->id(),
+                'processo_id' => $processo->id,
+            ],
+            [
+                'tribunal' => $request->tribunal,
+                'numero_processo' => $request->source['numeroProcesso'] ?? null,
+                'ultima_atualizacao_datajud' => $request->source['dataHoraUltimaAtualizacao'] ?? now(),
+                'ativo' => true,
+            ]
+        );
+
+        return response()->json(['ok' => true]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
 }
 
 }

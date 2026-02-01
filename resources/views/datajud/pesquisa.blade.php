@@ -254,6 +254,7 @@
                     const badge = document.createElement('div');
                     badge.innerHTML = '<span class="badge bg-secondary me-2">' + tribunal + '</span>' +
                         '<button class="btn btn-sm btn-outline-primary me-1" data-action="refresh">Atualizar</button>' +
+                        '<button class="btn btn-sm btn-outline-success me-1" data-action="save">Salvar</button>' +
                         '<button class="btn btn-sm btn-success" data-action="monitor">Monitorar</button>';
 
                     header.appendChild(title);
@@ -331,10 +332,46 @@
 
                     // attach behavior
                     const refreshBtn = badge.querySelector('[data-action="refresh"]');
+                    const saveBtn = badge.querySelector('[data-action="save"]');
                     const monitorBtn = badge.querySelector('[data-action="monitor"]');
 
                     refreshBtn.addEventListener('click', function () {
                         fetchSingleAndUpdate(idx, tribunal, numero, card, true);
+                    });
+
+                    // save button sends to backend
+                    saveBtn.addEventListener('click', function () {
+                        saveBtn.disabled = true;
+                        const saveText = saveBtn.textContent;
+                        saveBtn.textContent = 'Salvando...';
+                        
+                        fetch('{{ route('datajud.salvar') }}', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ tribunal: tribunal, source: source })
+                        }).then(r => r.json())
+                          .then(json => {
+                              if (json.ok) {
+                                  showToast('Sucesso', 'Processo salvo com sucesso!');
+                                  saveBtn.textContent = 'Salvo ✓';
+                                  saveBtn.classList.remove('btn-outline-success');
+                                  saveBtn.classList.add('btn-success');
+                              } else {
+                                  showToast('Erro', json.error || 'Erro ao salvar processo');
+                                  saveBtn.textContent = saveText;
+                              }
+                          })
+                          .catch(err => {
+                              console.error('Save error', err);
+                              showToast('Erro', 'Erro ao salvar processo');
+                              saveBtn.textContent = saveText;
+                          })
+                          .finally(() => saveBtn.disabled = false);
                     });
 
                     // monitor button toggles persistent monitoring

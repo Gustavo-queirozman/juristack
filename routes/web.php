@@ -7,7 +7,7 @@ use App\Http\Controllers\DataJudController;
 
 Route::get('/datajud/pesquisa', fn () => view('datajud.pesquisa'));
 Route::get('/datajud/salvos', [DataJudController::class, 'salvos'])->name('datajud.salvos');
-Route::post('/datajud/salvar', [DataJudController::class, 'salvar']);
+Route::post('/datajud/salvar', [DataJudController::class, 'salvarProcesso'])->name('datajud.salvar');
 
 
 // API route for AJAX/internal requests

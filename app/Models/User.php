@@ -45,4 +45,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Relacionamento com processos monitorados
+     */
+    public function processosMonitorados()
+    {
+        return $this->hasMany(ProcessoMonitor::class, 'user_id');
+    }
 }
