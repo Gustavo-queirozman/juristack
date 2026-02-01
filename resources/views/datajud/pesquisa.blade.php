@@ -316,8 +316,46 @@
                         modal.show();
                     });
 
+                    // duplicate save button inside card body for visibility
+                    const saveBtnBody = document.createElement('button');
+                    saveBtnBody.className = 'btn btn-sm btn-outline-success me-2';
+                    saveBtnBody.textContent = 'Salvar';
+                    saveBtnBody.addEventListener('click', function () {
+                        saveBtnBody.disabled = true;
+                        const prev = saveBtnBody.textContent;
+                        saveBtnBody.textContent = 'Salvando...';
+                        fetch('{{ route('datajud.salvar') }}', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ tribunal: tribunal, source: source })
+                        }).then(r => r.json())
+                          .then(json => {
+                              if (json.ok) {
+                                  showToast('Sucesso', 'Processo salvo com sucesso!');
+                                  saveBtnBody.textContent = 'Salvo ✓';
+                                  saveBtnBody.classList.remove('btn-outline-success');
+                                  saveBtnBody.classList.add('btn-success');
+                              } else {
+                                  showToast('Erro', json.error || 'Erro ao salvar processo');
+                                  saveBtnBody.textContent = prev;
+                              }
+                          })
+                          .catch(err => {
+                              console.error('Save error', err);
+                              showToast('Erro', 'Erro ao salvar processo');
+                              saveBtnBody.textContent = prev;
+                          })
+                          .finally(() => saveBtnBody.disabled = false);
+                    });
+
                     actionsDiv.appendChild(copyBtn);
                     actionsDiv.appendChild(jsonBtn);
+                    actionsDiv.appendChild(saveBtnBody);
 
                     body.appendChild(meta);
                     body.appendChild(infoTable);
