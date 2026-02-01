@@ -128,13 +128,26 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
 {
     $request->validate([
         'tribunal' => 'required|string',
-        'source' => 'required|array',
+        'source' => 'required', // aceita array (AJAX) ou JSON string (form)
     ]);
+
+    // garantir que temos um array em $source
+    $source = $request->input('source');
+    if (is_string($source)) {
+        $decoded = json_decode($source, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $source = $decoded;
+        }
+    }
+
+    if (!is_array($source)) {
+        return response()->json(['error' => 'Campo source inválido'], 422);
+    }
 
     try {
         // Salvar o processo
         $processo = $persist->salvarProcesso(
-            $request->source,
+            $source,
             $request->tribunal,
             auth()->id()
         );
@@ -147,8 +160,8 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
             ],
             [
                 'tribunal' => $request->tribunal,
-                'numero_processo' => $request->source['numeroProcesso'] ?? null,
-                'ultima_atualizacao_datajud' => $request->source['dataHoraUltimaAtualizacao'] ?? now(),
+                'numero_processo' => $source['numeroProcesso'] ?? null,
+                'ultima_atualizacao_datajud' => $source['dataHoraUltimaAtualizacao'] ?? now(),
                 'ativo' => true,
             ]
         );
