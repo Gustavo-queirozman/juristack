@@ -5,9 +5,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DataJudController;
 
 
-Route::get('/datajud/pesquisa', fn () => view('datajud.pesquisa'));
+Route::get('/datajud/pesquisa', fn () => view('datajud.pesquisa'))->name('datajud.index');
 Route::get('/datajud/salvos', [DataJudController::class, 'salvos'])->name('datajud.salvos');
 Route::post('/datajud/salvar', [DataJudController::class, 'salvarProcesso'])->name('datajud.salvar');
+
+// show / delete saved
+Route::get('/datajud/salvo/{id}', [DataJudController::class, 'showSaved'])->name('datajud.salvo.show');
+Route::delete('/datajud/salvo/{id}', [DataJudController::class, 'deleteSaved'])->name('datajud.salvo.delete');
 
 
 // API route for AJAX/internal requests

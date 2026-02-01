@@ -159,4 +159,49 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
     }
 }
 
+    /**
+     * Mostrar detalhe de um processo salvo
+     */
+    public function showSaved($id)
+    {
+        $processo = DatajudProcesso::with(['assuntos', 'movimentos.complementos'])
+            ->where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        return view('datajud.salvo', compact('processo'));
+    }
+
+    /**
+     * Remover processo salvo (apenas proprietário)
+     */
+    public function deleteSaved(Request $request, $id)
+    {
+        $processo = DatajudProcesso::with('movimentos.complementos', 'assuntos')
+            ->where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        // remover monitor associado
+        ProcessoMonitor::where('processo_id', $processo->id)->delete();
+
+        // remover movimentos e complementos
+        foreach ($processo->movimentos as $mov) {
+            $mov->complementos()->delete();
+            $mov->delete();
+        }
+
+        // remover assuntos
+        $processo->assuntos()->delete();
+
+        // remover o processo
+        $processo->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['ok' => true]);
+        }
+
+        return redirect()->route('datajud.salvos')->with('status', 'Processo removido com sucesso.');
+    }
+
 }
