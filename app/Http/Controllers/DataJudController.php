@@ -144,6 +144,15 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
         return response()->json(['error' => 'Campo source inválido'], 422);
     }
 
+    // Garantir numeroProcesso (API pode retornar camelCase ou snake_case)
+    if (empty($source['numeroProcesso']) && !empty($source['numero_processo'])) {
+        $source['numeroProcesso'] = $source['numero_processo'];
+    }
+
+    if (empty($source['numeroProcesso'])) {
+        return response()->json(['error' => 'Dados do processo incompletos (número não encontrado).'], 422);
+    }
+
     try {
         // Salvar o processo
         $processo = $persist->salvarProcesso(

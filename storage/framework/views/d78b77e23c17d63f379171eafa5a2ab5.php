@@ -8,13 +8,13 @@
     <meta name="generator" content="v0.app">
     
     <!-- Icons -->
-    <link rel="icon" href="{{ asset('icon-light-32x32.png') }}" media="(prefers-color-scheme: light)">
-    <link rel="icon" href="{{ asset('icon-dark-32x32.png') }}" media="(prefers-color-scheme: dark)">
-    <link rel="icon" href="{{ asset('icon.svg') }}" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="{{ asset('apple-icon.png') }}">
+    <link rel="icon" href="<?php echo e(asset('icon-light-32x32.png')); ?>" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="<?php echo e(asset('icon-dark-32x32.png')); ?>" media="(prefers-color-scheme: dark)">
+    <link rel="icon" href="<?php echo e(asset('icon.svg')); ?>" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="<?php echo e(asset('apple-icon.png')); ?>">
     
     <!-- Styles e scripts (build Vite: app.css inclui tema; main.js = scroll/nav) -->
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/main.js'])
+    <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js', 'resources/js/main.js']); ?>
     
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,7 +24,7 @@
 <body class="font-sans antialiased">
     <main class="min-h-screen bg-background">
         
-        @php
+        <?php
         $features = [
             [
                 'icon' => 'clock',
@@ -176,7 +176,7 @@
                 'popular' => false,
             ],
         ];
-        @endphp
+        ?>
 
         <!-- Navigation -->
         <nav id="navigation" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent">
@@ -271,49 +271,49 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    @foreach($features as $feature)
+                    <?php $__currentLoopData = $features; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $feature): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border">
                         <div class="mb-4">
                             <div class="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-secondary/10">
-                                @if($feature['icon'] === 'clock')
+                                <?php if($feature['icon'] === 'clock'): ?>
                                     <svg class="h-6 w-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
-                                @elseif($feature['icon'] === 'file-search')
+                                <?php elseif($feature['icon'] === 'file-search'): ?>
                                     <svg class="h-6 w-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                     </svg>
-                                @elseif($feature['icon'] === 'file-text')
+                                <?php elseif($feature['icon'] === 'file-text'): ?>
                                     <svg class="h-6 w-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                     </svg>
-                                @elseif($feature['icon'] === 'dollar-sign')
+                                <?php elseif($feature['icon'] === 'dollar-sign'): ?>
                                     <svg class="h-6 w-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
-                                @elseif($feature['icon'] === 'users')
+                                <?php elseif($feature['icon'] === 'users'): ?>
                                     <svg class="h-6 w-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                                     </svg>
-                                @elseif($feature['icon'] === 'bar-chart')
+                                <?php elseif($feature['icon'] === 'bar-chart'): ?>
                                     <svg class="h-6 w-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                     </svg>
-                                @elseif($feature['icon'] === 'shield')
+                                <?php elseif($feature['icon'] === 'shield'): ?>
                                     <svg class="h-6 w-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                                     </svg>
-                                @elseif($feature['icon'] === 'zap')
+                                <?php elseif($feature['icon'] === 'zap'): ?>
                                     <svg class="h-6 w-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                     </svg>
-                                @endif
+                                <?php endif; ?>
                             </div>
                         </div>
-                        <h3 class="text-xl font-semibold mb-2 text-card-foreground">{{ $feature['title'] }}</h3>
-                        <p class="text-muted-foreground leading-relaxed">{{ $feature['description'] }}</p>
+                        <h3 class="text-xl font-semibold mb-2 text-card-foreground"><?php echo e($feature['title']); ?></h3>
+                        <p class="text-muted-foreground leading-relaxed"><?php echo e($feature['description']); ?></p>
                     </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
         </section>
@@ -339,14 +339,14 @@
                         </p>
 
                         <ul class="space-y-3">
-                            @foreach($capabilities as $capability)
+                            <?php $__currentLoopData = $capabilities; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $capability): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <li class="flex items-start gap-3">
                                 <svg class="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <span class="text-foreground">{{ $capability }}</span>
+                                <span class="text-foreground"><?php echo e($capability); ?></span>
                             </li>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </ul>
 
                         <button class="bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base px-8 h-12 rounded-md font-medium transition-all inline-flex items-center justify-center gap-2">
@@ -409,32 +409,32 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    @foreach($benefits as $benefit)
+                    <?php $__currentLoopData = $benefits; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $benefit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm p-6 text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border">
                         <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-secondary/10 mb-4">
-                            @if($benefit['icon'] === 'trending-up')
+                            <?php if($benefit['icon'] === 'trending-up'): ?>
                                 <svg class="h-7 w-7 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                                 </svg>
-                            @elseif($benefit['icon'] === 'award')
+                            <?php elseif($benefit['icon'] === 'award'): ?>
                                 <svg class="h-7 w-7 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                                 </svg>
-                            @elseif($benefit['icon'] === 'clock')
+                            <?php elseif($benefit['icon'] === 'clock'): ?>
                                 <svg class="h-7 w-7 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                            @elseif($benefit['icon'] === 'users')
+                            <?php elseif($benefit['icon'] === 'users'): ?>
                                 <svg class="h-7 w-7 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                                 </svg>
-                            @endif
+                            <?php endif; ?>
                         </div>
-                        <div class="text-4xl font-bold text-secondary mb-2">{{ $benefit['metric'] }}</div>
-                        <div class="text-lg font-semibold mb-2 text-card-foreground">{{ $benefit['label'] }}</div>
-                        <p class="text-sm text-muted-foreground leading-relaxed">{{ $benefit['description'] }}</p>
+                        <div class="text-4xl font-bold text-secondary mb-2"><?php echo e($benefit['metric']); ?></div>
+                        <div class="text-lg font-semibold mb-2 text-card-foreground"><?php echo e($benefit['label']); ?></div>
+                        <p class="text-sm text-muted-foreground leading-relaxed"><?php echo e($benefit['description']); ?></p>
                     </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
         </section>
@@ -450,21 +450,21 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    @foreach($testimonials as $testimonial)
+                    <?php $__currentLoopData = $testimonials; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $testimonial): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm p-6 border-border hover:shadow-lg transition-all duration-300">
                         <svg class="h-8 w-8 text-secondary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
                         </svg>
-                        <p class="text-card-foreground leading-relaxed mb-6 italic">"{{ $testimonial['quote'] }}"</p>
+                        <p class="text-card-foreground leading-relaxed mb-6 italic">"<?php echo e($testimonial['quote']); ?>"</p>
                         <div class="flex items-center gap-4">
-                            <img src="{{ asset($testimonial['image']) }}" alt="{{ $testimonial['author'] }}" class="w-12 h-12 rounded-full object-cover">
+                            <img src="<?php echo e(asset($testimonial['image'])); ?>" alt="<?php echo e($testimonial['author']); ?>" class="w-12 h-12 rounded-full object-cover">
                             <div>
-                                <div class="font-semibold text-card-foreground">{{ $testimonial['author'] }}</div>
-                                <div class="text-sm text-muted-foreground">{{ $testimonial['role'] }}</div>
+                                <div class="font-semibold text-card-foreground"><?php echo e($testimonial['author']); ?></div>
+                                <div class="text-sm text-muted-foreground"><?php echo e($testimonial['role']); ?></div>
                             </div>
                         </div>
                     </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
         </section>
@@ -480,43 +480,44 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                    @foreach($plans as $plan)
-                    <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm p-8 relative hover:shadow-lg transition-all duration-300 {{ $plan['popular'] ? 'border-secondary border-2 shadow-lg scale-105' : 'border-border' }}">
-                        @if($plan['popular'])
+                    <?php $__currentLoopData = $plans; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plan): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm p-8 relative hover:shadow-lg transition-all duration-300 <?php echo e($plan['popular'] ? 'border-secondary border-2 shadow-lg scale-105' : 'border-border'); ?>">
+                        <?php if($plan['popular']): ?>
                         <div class="absolute -top-4 left-1/2 -translate-x-1/2">
                             <span class="bg-secondary text-secondary-foreground px-4 py-1 rounded-full text-sm font-semibold">
                                 Mais Popular
                             </span>
                         </div>
-                        @endif
+                        <?php endif; ?>
 
                         <div class="text-center mb-6">
-                            <h3 class="text-2xl font-bold mb-2 text-card-foreground">{{ $plan['name'] }}</h3>
-                            <p class="text-sm text-muted-foreground mb-4">{{ $plan['description'] }}</p>
+                            <h3 class="text-2xl font-bold mb-2 text-card-foreground"><?php echo e($plan['name']); ?></h3>
+                            <p class="text-sm text-muted-foreground mb-4"><?php echo e($plan['description']); ?></p>
                             <div class="flex items-end justify-center gap-1">
-                                <span class="text-4xl font-bold text-card-foreground">{{ $plan['price'] }}</span>
-                                @if($plan['period'])
-                                <span class="text-muted-foreground mb-1">{{ $plan['period'] }}</span>
-                                @endif
+                                <span class="text-4xl font-bold text-card-foreground"><?php echo e($plan['price']); ?></span>
+                                <?php if($plan['period']): ?>
+                                <span class="text-muted-foreground mb-1"><?php echo e($plan['period']); ?></span>
+                                <?php endif; ?>
                             </div>
                         </div>
 
                         <ul class="space-y-3 mb-8">
-                            @foreach($plan['features'] as $feature)
+                            <?php $__currentLoopData = $plan['features']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $feature): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <li class="flex items-start gap-3">
                                 <svg class="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span class="text-card-foreground">{{ $feature }}</span>
+                                <span class="text-card-foreground"><?php echo e($feature); ?></span>
                             </li>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </ul>
 
-                        <button class="w-full h-10 rounded-md px-6 font-medium transition-all {{ $plan['popular'] ? 'bg-secondary text-secondary-foreground hover:bg-secondary/90' : 'bg-primary text-primary-foreground hover:bg-primary/90' }}">
-                            {{ $plan['cta'] }}
+                        <button class="w-full h-10 rounded-md px-6 font-medium transition-all <?php echo e($plan['popular'] ? 'bg-secondary text-secondary-foreground hover:bg-secondary/90' : 'bg-primary text-primary-foreground hover:bg-primary/90'); ?>">
+                            <?php echo e($plan['cta']); ?>
+
                         </button>
                     </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
         </section>
@@ -669,3 +670,4 @@
     </main>
 </body>
 </html>
+<?php /**PATH /home/snews/projects/juristack/resources/views/welcome.blade.php ENDPATH**/ ?>

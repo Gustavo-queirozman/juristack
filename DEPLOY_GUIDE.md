@@ -8,7 +8,90 @@
 - Node.js 18+ (para builds CSS/JS, opcional)
 - Git
 
-## Passos de Deploy
+---
+
+## Desenvolvimento local (com Docker para o banco)
+
+Se você **não tem MySQL instalado**, use o Docker apenas para subir o banco. A aplicação Laravel continua rodando na sua máquina.
+
+**Requisito:** PHP com extensão `pdo_mysql`. Se ao rodar `php artisan migrate` aparecer "could not find driver", instale:
+
+```bash
+# Ubuntu/Debian (ajuste 8.3 para sua versão do PHP)
+sudo apt install php8.3-mysql
+# ou
+sudo apt install php-mysql
+```
+
+**Alternativa sem MySQL:** use SQLite (não precisa de Docker nem do driver MySQL). No `.env`: `DB_CONNECTION=sqlite`, `DB_DATABASE=database/database.sqlite`, crie o arquivo `touch database/database.sqlite` e rode `php artisan migrate`.
+
+### 1. Subir o MySQL em um container
+
+```bash
+docker compose up -d
+```
+
+Aguarde o MySQL ficar saudável (cerca de 10–20 segundos). O banco `juristack` e o usuário `juristack`/senha `juristack` são criados automaticamente.
+
+### 2. Configurar o ambiente
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+O `.env.example` já está preparado para o MySQL do Docker (`DB_HOST=127.0.0.1`, `DB_DATABASE=juristack`, `DB_USERNAME=juristack`, `DB_PASSWORD=juristack`). Se o seu `.env` já existia, confira se essas variáveis estão assim.
+
+Coloque seu token do DataJud no `.env` (se ainda não tiver):
+
+```env
+DATAJUD_TOKEN=seu-token
+DATAJUD_BASE_URL=https://api-publica.datajud.cnj.jus.br
+```
+
+### 3. Migrations e tabela da fila
+
+```bash
+php artisan migrate
+php artisan queue:table
+php artisan migrate
+```
+
+### 4. Rodar a aplicação
+
+```bash
+php artisan serve
+```
+
+Acesse: **http://localhost:8000**
+
+### 5. (Opcional) Build dos assets e fila
+
+```bash
+npm install && npm run dev
+```
+
+Em outro terminal, se for usar jobs em fila:
+
+```bash
+php artisan queue:work --tries=3
+```
+
+### Parar o banco
+
+```bash
+docker compose down
+```
+
+Os dados ficam no volume `juristack_mysql_data`. Para apagar tudo e recomeçar:
+
+```bash
+docker compose down -v
+```
+
+---
+
+## Passos de Deploy (produção)
 
 ### 1. Clonar Repositório
 

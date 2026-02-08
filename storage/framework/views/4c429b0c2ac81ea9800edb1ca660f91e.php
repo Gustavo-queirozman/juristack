@@ -1,8 +1,6 @@
-@extends('layouts.app')
+<?php $__env->startSection('pageTitle', 'Processos salvos'); ?>
 
-@section('pageTitle', 'Processos salvos')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="max-w-4xl">
 
     <p class="text-gray-600 text-sm mb-6">
@@ -11,80 +9,83 @@
 
     <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 class="text-lg font-semibold text-gray-900 m-0">
-            {{ $processos->total() }} {{ $processos->total() === 1 ? 'processo' : 'processos' }} salvo(s)
+            <?php echo e($processos->total()); ?> <?php echo e($processos->total() === 1 ? 'processo' : 'processos'); ?> salvo(s)
         </h2>
-        <a href="{{ route('datajud.index') }}"
+        <a href="<?php echo e(route('datajud.index')); ?>"
            class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
             Nova pesquisa
         </a>
     </div>
 
-    @if($processos->isEmpty())
+    <?php if($processos->isEmpty()): ?>
         <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
             <p class="text-gray-600 mb-4">Nenhum processo salvo até o momento.</p>
-            <a href="{{ route('datajud.index') }}"
+            <a href="<?php echo e(route('datajud.index')); ?>"
                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
                 Pesquisar e salvar um processo
             </a>
         </div>
-    @else
+    <?php else: ?>
         <ul class="space-y-4 list-none p-0 m-0">
-            @foreach($processos as $processo)
-                @php
+            <?php $__currentLoopData = $processos; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $processo): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <?php
                     $ultimoMov = $processo->movimentos->first();
                     $ultimoMovNome = $ultimoMov ? $ultimoMov->nome : null;
-                @endphp
+                ?>
                 <li class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                     <div class="p-4 sm:p-5">
                         <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
                             <div class="min-w-0">
                                 <p class="font-semibold text-gray-900 truncate">
-                                    {{ $processo->numero_processo }}
+                                    <?php echo e($processo->numero_processo); ?>
+
                                 </p>
                                 <div class="flex flex-wrap items-center gap-2 mt-1">
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
-                                        {{ $processo->tribunal }}
+                                        <?php echo e($processo->tribunal); ?>
+
                                     </span>
-                                    @if($processo->classe_nome)
-                                        <span class="text-sm text-gray-500">{{ $processo->classe_nome }}</span>
-                                    @endif
+                                    <?php if($processo->classe_nome): ?>
+                                        <span class="text-sm text-gray-500"><?php echo e($processo->classe_nome); ?></span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-600 mb-4">
-                            @if($processo->orgao_julgador_nome)
-                                <p class="m-0"><span class="font-medium text-gray-700">Juízo:</span> {{ $processo->orgao_julgador_nome }}</p>
-                            @endif
-                            <p class="m-0"><span class="font-medium text-gray-700">Ajuizamento:</span> {{ $processo->data_ajuizamento ? $processo->data_ajuizamento->format('d/m/Y') : '—' }}</p>
-                            <p class="m-0"><span class="font-medium text-gray-700">Última atualização:</span> {{ $processo->datahora_ultima_atualizacao ? $processo->datahora_ultima_atualizacao->format('d/m/Y H:i') : '—' }}</p>
-                            @if($ultimoMovNome)
-                                <p class="m-0 sm:col-span-2"><span class="font-medium text-gray-700">Último movimento:</span> {{ $ultimoMovNome }}</p>
-                            @endif
+                            <?php if($processo->orgao_julgador_nome): ?>
+                                <p class="m-0"><span class="font-medium text-gray-700">Juízo:</span> <?php echo e($processo->orgao_julgador_nome); ?></p>
+                            <?php endif; ?>
+                            <p class="m-0"><span class="font-medium text-gray-700">Ajuizamento:</span> <?php echo e($processo->data_ajuizamento ? $processo->data_ajuizamento->format('d/m/Y') : '—'); ?></p>
+                            <p class="m-0"><span class="font-medium text-gray-700">Última atualização:</span> <?php echo e($processo->datahora_ultima_atualizacao ? $processo->datahora_ultima_atualizacao->format('d/m/Y H:i') : '—'); ?></p>
+                            <?php if($ultimoMovNome): ?>
+                                <p class="m-0 sm:col-span-2"><span class="font-medium text-gray-700">Último movimento:</span> <?php echo e($ultimoMovNome); ?></p>
+                            <?php endif; ?>
                         </div>
 
-                        @if($processo->assuntos->count())
+                        <?php if($processo->assuntos->count()): ?>
                             <p class="text-sm text-gray-500 mb-4 m-0">
                                 <span class="font-medium text-gray-700">Assuntos:</span>
-                                {{ $processo->assuntos->pluck('nome')->take(3)->implode(', ') }}{{ $processo->assuntos->count() > 3 ? '…' : '' }}
+                                <?php echo e($processo->assuntos->pluck('nome')->take(3)->implode(', ')); ?><?php echo e($processo->assuntos->count() > 3 ? '…' : ''); ?>
+
                             </p>
-                        @endif
+                        <?php endif; ?>
 
                         <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
-                            <a href="{{ route('datajud.salvo.show', $processo->id) }}"
+                            <a href="<?php echo e(route('datajud.salvo.show', $processo->id)); ?>"
                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                                 Ver detalhes
                             </a>
                             <button type="button"
                                     class="salvos-json-btn inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                                    data-payload-base64="{{ base64_encode(json_encode($processo->payload)) }}">
+                                    data-payload-base64="<?php echo e(base64_encode(json_encode($processo->payload))); ?>">
                                 Ver JSON
                             </button>
                             <form method="POST"
-                                  action="{{ route('datajud.salvo.delete', $processo->id) }}"
+                                  action="<?php echo e(route('datajud.salvo.delete', $processo->id)); ?>"
                                   class="inline removo-form-salvos">
-                                @csrf
-                                @method('DELETE')
+                                <?php echo csrf_field(); ?>
+                                <?php echo method_field('DELETE'); ?>
                                 <button type="button"
                                         class="removo-btn-salvos inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-700 text-sm font-medium rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
                                     Remover
@@ -93,18 +94,19 @@
                         </div>
                     </div>
                 </li>
-            @endforeach
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </ul>
 
-        @if($processos->hasPages())
+        <?php if($processos->hasPages()): ?>
             <div class="mt-6">
-                {{ $processos->links() }}
+                <?php echo e($processos->links()); ?>
+
             </div>
-        @endif
-    @endif
+        <?php endif; ?>
+    <?php endif; ?>
 </div>
 
-{{-- Modal de confirmação de remoção --}}
+
 <div id="salvosRemoveModal" class="salvos-confirm-modal" role="dialog" aria-labelledby="salvosRemoveModalTitle" aria-modal="true">
     <div class="salvos-confirm-backdrop">
         <div class="salvos-confirm-inner">
@@ -122,7 +124,7 @@
     </div>
 </div>
 
-{{-- Modal JSON (oculto até clicar em "Ver JSON") --}}
+
 <div id="salvosJsonModal" class="salvos-json-modal" role="dialog" aria-labelledby="salvosJsonModalTitle" aria-modal="true">
     <div class="salvos-json-modal-backdrop">
         <div class="salvos-json-modal-inner">
@@ -235,4 +237,6 @@
     });
 })();
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /home/snews/projects/juristack/resources/views/datajud/salvos.blade.php ENDPATH**/ ?>
