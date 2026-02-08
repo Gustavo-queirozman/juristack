@@ -3,6 +3,7 @@
     $isDashboard = request()->routeIs('dashboard');
     $isPesquisa = request()->routeIs('datajud.index');
     $isSalvos = request()->routeIs('datajud.salvos') || request()->routeIs('datajud.salvo.show');
+    $isProfile = request()->routeIs('profile.edit');
 @endphp
 <aside class="sidebar" aria-label="Navegação principal">
     <div class="sidebar-header">
@@ -28,15 +29,22 @@
                 <span class="sidebar-link-icon" aria-hidden="true">📁</span>
                 <span>Processos salvos</span>
             </a>
+            <a href="{{ route('profile.edit') }}" class="sidebar-link {{ $isProfile ? 'sidebar-link-active' : '' }} sidebar-link-muted">
+                <span class="sidebar-link-icon" aria-hidden="true">⚙</span>
+                <span>Configurações</span>
+            </a>
         </div>
         @endauth
     </nav>
     @auth
     <div class="sidebar-footer">
-        <a href="{{ route('profile.edit') }}" class="sidebar-link sidebar-link-muted">
-            <span class="sidebar-link-icon" aria-hidden="true">⚙</span>
-            <span>Perfil</span>
-        </a>
+        <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form" id="logout-form">
+            @csrf
+            <button type="button" class="sidebar-link sidebar-link-logout" id="logout-btn" aria-controls="logout-confirm-modal">
+                <span class="sidebar-link-icon" aria-hidden="true">↪</span>
+                <span>Sair</span>
+            </button>
+        </form>
     </div>
     @endauth
 </aside>

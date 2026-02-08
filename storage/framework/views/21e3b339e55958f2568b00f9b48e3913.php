@@ -3,6 +3,7 @@
     $isDashboard = request()->routeIs('dashboard');
     $isPesquisa = request()->routeIs('datajud.index');
     $isSalvos = request()->routeIs('datajud.salvos') || request()->routeIs('datajud.salvo.show');
+    $isProfile = request()->routeIs('profile.edit');
 ?>
 <aside class="sidebar" aria-label="Navegação principal">
     <div class="sidebar-header">
@@ -28,15 +29,22 @@
                 <span class="sidebar-link-icon" aria-hidden="true">📁</span>
                 <span>Processos salvos</span>
             </a>
+            <a href="<?php echo e(route('profile.edit')); ?>" class="sidebar-link <?php echo e($isProfile ? 'sidebar-link-active' : ''); ?> sidebar-link-muted">
+                <span class="sidebar-link-icon" aria-hidden="true">⚙</span>
+                <span>Configurações</span>
+            </a>
         </div>
         <?php endif; ?>
     </nav>
     <?php if(auth()->guard()->check()): ?>
     <div class="sidebar-footer">
-        <a href="<?php echo e(route('profile.edit')); ?>" class="sidebar-link sidebar-link-muted">
-            <span class="sidebar-link-icon" aria-hidden="true">⚙</span>
-            <span>Perfil</span>
-        </a>
+        <form method="POST" action="<?php echo e(route('logout')); ?>" class="sidebar-logout-form" id="logout-form">
+            <?php echo csrf_field(); ?>
+            <button type="button" class="sidebar-link sidebar-link-logout" id="logout-btn" aria-controls="logout-confirm-modal">
+                <span class="sidebar-link-icon" aria-hidden="true">↪</span>
+                <span>Sair</span>
+            </button>
+        </form>
     </div>
     <?php endif; ?>
 </aside>
