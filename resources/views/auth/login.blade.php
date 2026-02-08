@@ -2,6 +2,10 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
+    <p class="mb-4 text-sm text-gray-600">
+        Os processos que você salvar ficam vinculados à sua conta. Faça login ou cadastre-se para continuar.
+    </p>
+
     <form method="POST" action="{{ route('login') }}">
         @csrf
 
@@ -43,5 +47,12 @@
                 {{ __('Log in') }}
             </x-primary-button>
         </div>
+
+        <p class="mt-6 text-center text-sm text-gray-600">
+            Não tem conta?
+            <a href="{{ route('register') }}" class="font-medium text-indigo-600 hover:text-indigo-500 underline rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Cadastre-se
+            </a>
+        </p>
     </form>
 </x-guest-layout>

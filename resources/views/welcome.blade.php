@@ -205,12 +205,12 @@
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <button class="hidden md:inline-flex h-8 rounded-md gap-1.5 px-3 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground">
+                        <a href="{{ route('login') }}" class="hidden md:inline-flex h-8 items-center rounded-md gap-1.5 px-3 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground">
                             Entrar
-                        </button>
-                        <button class="h-8 rounded-md gap-1.5 px-3 text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all">
+                        </a>
+                        <a href="{{ route('register') }}" class="inline-flex h-8 items-center rounded-md gap-1.5 px-3 text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all">
                             Começar Agora
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>

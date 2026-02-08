@@ -30,6 +30,10 @@
 <?php unset($__componentOriginal7c1bf3a9346f208f66ee83b06b607fb5); ?>
 <?php endif; ?>
 
+    <p class="mb-4 text-sm text-gray-600">
+        Os processos que você salvar ficam vinculados à sua conta. Faça login ou cadastre-se para continuar.
+    </p>
+
     <form method="POST" action="<?php echo e(route('login')); ?>">
         <?php echo csrf_field(); ?>
 
@@ -202,6 +206,13 @@
 <?php unset($__componentOriginald411d1792bd6cc877d687758b753742c); ?>
 <?php endif; ?>
         </div>
+
+        <p class="mt-6 text-center text-sm text-gray-600">
+            Não tem conta?
+            <a href="<?php echo e(route('register')); ?>" class="font-medium text-indigo-600 hover:text-indigo-500 underline rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Cadastre-se
+            </a>
+        </p>
     </form>
  <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>

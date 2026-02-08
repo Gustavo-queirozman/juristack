@@ -1,4 +1,8 @@
 <x-guest-layout>
+    <p class="mb-4 text-sm text-gray-600">
+        Crie sua conta para salvar e acompanhar processos. Tudo fica vinculado ao seu usuário.
+    </p>
+
     <form method="POST" action="{{ route('register') }}">
         @csrf
 
