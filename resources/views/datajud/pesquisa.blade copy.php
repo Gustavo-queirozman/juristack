@@ -115,7 +115,8 @@
         <div class="mb-3">
             <label for="tipo_consulta" class="form-label">Tipo de Consulta</label>
             <select id="tipo_consulta" class="form-select">
-                <option value="numero" selected>Número do Processo</option>
+                <option value="numero">Número do Processo</option>
+                <option value="advogado">Nome do Advogado</option>
             </select>
         </div>
 
@@ -134,6 +135,20 @@
             >
         </div>
 
+        {{-- Nome do Advogado --}}
+        <div class="mb-3">
+            <label for="nome_advogado" class="form-label">
+                Nome do Advogado
+            </label>
+            <input
+                type="text"
+                name="nome_advogado"
+                id="nome_advogado"
+                class="form-control"
+                placeholder="Ex: João da Silva"
+                value="{{ request('nome_advogado') }}"
+            >
+        </div>
 
         <div class="alert alert-info">
             Preencha <strong>o número do processo</strong> ou <strong>o nome do advogado</strong>.

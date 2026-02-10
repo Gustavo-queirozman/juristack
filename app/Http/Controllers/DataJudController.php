@@ -103,26 +103,7 @@ public function monitorados()
         return response()->json($resp);
     }
 
-    /**
-     * Debug endpoint for quick manual tests. Returns raw response and logs.
-     * Accessible via GET /api/datajud/debug?tribunal=ALL&tipo=advogado&valor=Nelson%20Mannrich
-     */
-    public function debug(Request $request)
-    {
-        $tribunal = $request->get('tribunal', 'ALL');
-        $tipo = $request->get('tipo', 'advogado'); // 'numero' or 'advogado'
-        $valor = $request->get('valor', 'Nelson Mannrich');
-        $from = (int) $request->get('from', 0);
-        $size = (int) $request->get('size', 10);
 
-        $resp = $this->service->debugSearch($tribunal, $tipo, $valor, $from, $size);
-
-        if (empty($resp)) {
-            return response()->json(['error' => 'No response or request failed'], 502);
-        }
-
-        return response()->json($resp);
-    }
 
 public function salvarProcesso(Request $request, DatajudPersistService $persist)
 {

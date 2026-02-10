@@ -1,8 +1,6 @@
-@extends('layouts.app')
+<?php $__env->startSection('pageTitle', 'Pesquisa de Processos'); ?>
 
-@section('pageTitle', 'Pesquisa de Processos')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container">
     <style>
         /* DataJud UI enhancements */
@@ -51,9 +49,9 @@
     </div>
 
     <form id="datajud-form" method="POST" action="#">
-        @csrf
+        <?php echo csrf_field(); ?>
         
-        {{-- Tribunal --}}
+        
         <div class="mb-3">
             <label for="tribunal" class="form-label">
                 Tribunal <span class="text-danger">*</span>
@@ -111,7 +109,7 @@
             </select>
         </div>
 
-        {{-- Tipo de Consulta --}}
+        
         <div class="mb-3">
             <label for="tipo_consulta" class="form-label">Tipo de Consulta</label>
             <select id="tipo_consulta" class="form-select">
@@ -119,7 +117,7 @@
             </select>
         </div>
 
-        {{-- Número do Processo --}}
+        
         <div class="mb-3">
             <label for="numero_processo" class="form-label">
                 Número do Processo
@@ -130,7 +128,7 @@
                 id="numero_processo"
                 class="form-control"
                 placeholder="Ex: 0001234-56.2023.8.26.0000"
-                value="{{ request('numero_processo') }}"
+                value="<?php echo e(request('numero_processo')); ?>"
             >
         </div>
 
@@ -153,7 +151,7 @@
         <div class="col-md-4">
             <h5 class="mt-4">Processos salvos</h5>
             <p class="small text-muted">Processos que você salvou ficam disponíveis para consulta e, em breve, acompanhamento em tempo real.</p>
-            <a href="{{ route('datajud.salvos') }}" class="btn btn-outline-primary btn-sm mb-3">Ver meus processos salvos</a>
+            <a href="<?php echo e(route('datajud.salvos')); ?>" class="btn btn-outline-primary btn-sm mb-3">Ver meus processos salvos</a>
             <h6 class="mt-3">Monitorados nesta sessão</h6>
             <div id="monitored-list" class="list-group"></div>
         </div>
@@ -182,9 +180,9 @@
             const form = document.getElementById('datajud-form');
             const btn = document.getElementById('btn-pesquisar');
             const resultados = document.getElementById('resultados');
-            const url = '{{ route('datajud.api.search') }}';
+            const url = '<?php echo e(route('datajud.api.search')); ?>';
             const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
-            const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '{{ csrf_token() }}';
+            const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '<?php echo e(csrf_token()); ?>';
 
             const monitoredKey = 'datajud_monitored_v1';
             const monitorIntervals = {};
@@ -344,7 +342,7 @@
                         var prevText = btnEl.textContent;
                         if (overlay) overlay.classList.add('is-visible');
                         allSaveBtns.forEach(function(b) { b.disabled = true; });
-                        fetch('{{ route('datajud.salvar') }}', {
+                        fetch('<?php echo e(route('datajud.salvar')); ?>', {
                             method: 'POST',
                             credentials: 'same-origin',
                             headers: {
@@ -364,7 +362,7 @@
                                     b.dataset.saved = '1';
                                     b.classList.add('opacity-90');
                                 });
-                                showToast('success', 'Processo salvo', 'O processo foi salvo com sucesso. <a href="{{ route('datajud.salvos') }}" style="text-decoration:underline;font-weight:500;">Ver Processos salvos</a>');
+                                showToast('success', 'Processo salvo', 'O processo foi salvo com sucesso. <a href="<?php echo e(route('datajud.salvos')); ?>" style="text-decoration:underline;font-weight:500;">Ver Processos salvos</a>');
                             } else {
                                 showToast('error', 'Erro ao salvar', (json && json.error) || 'Erro ao salvar processo.');
                                 allSaveBtns.forEach(function(b) { b.textContent = prevText; b.disabled = false; });
@@ -455,7 +453,7 @@
 
             function fetchSingleAndUpdate(idx, tribunal, numero, card, notifyOnChange = false) {
                 const payload = { tribunal: tribunal, numero_processo: numero };
-                return fetch('{{ route('datajud.api.search') }}', {
+                return fetch('<?php echo e(route('datajud.api.search')); ?>', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: {
@@ -652,4 +650,6 @@
     </script>
     </form>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /home/gustavo/Desktop/juristack/resources/views/datajud/pesquisa.blade.php ENDPATH**/ ?>
