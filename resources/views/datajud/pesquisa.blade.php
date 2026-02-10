@@ -567,9 +567,12 @@
 
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                const tipo = document.getElementById('tipo_consulta') ? document.getElementById('tipo_consulta').value : 'numero';
-                const numVal = (document.getElementById('numero_processo').value || '').trim();
-                const advVal = (document.getElementById('nome_advogado').value || '').trim();
+                const tipoEl = document.getElementById('tipo_consulta');
+                const tipo = tipoEl ? tipoEl.value : 'numero';
+                const numEl = document.getElementById('numero_processo');
+                const numVal = (numEl && numEl.value ? numEl.value : '').trim();
+                const advEl = document.getElementById('nome_advogado');
+                const advVal = (advEl && advEl.value ? advEl.value : '').trim();
                 if (tipo === 'numero' && !numVal) {
                     showToast('info', 'Campo obrigatório', 'Informe o número do processo.');
                     return;
@@ -621,15 +624,18 @@
             // Toggle visibility based on tipo_consulta
             const tipoSelect = document.getElementById('tipo_consulta');
             function toggleFields() {
+                if (!tipoSelect) return;
                 const tipo = tipoSelect.value;
-                const numDiv = document.getElementById('numero_processo').closest('.mb-3');
-                const advDiv = document.getElementById('nome_advogado').closest('.mb-3');
+                const numEl = document.getElementById('numero_processo');
+                const advEl = document.getElementById('nome_advogado');
+                const numDiv = numEl ? numEl.closest('.mb-3') : null;
+                const advDiv = advEl ? advEl.closest('.mb-3') : null;
                 if (tipo === 'numero') {
-                    numDiv.style.display = '';
-                    advDiv.style.display = 'none';
+                    if (numDiv) numDiv.style.display = '';
+                    if (advDiv) advDiv.style.display = 'none';
                 } else {
-                    numDiv.style.display = 'none';
-                    advDiv.style.display = '';
+                    if (numDiv) numDiv.style.display = 'none';
+                    if (advDiv) advDiv.style.display = '';
                 }
             }
 

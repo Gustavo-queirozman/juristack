@@ -48,4 +48,4 @@
     </div>
     <?php endif; ?>
 </aside>
-<?php /**PATH /home/gustavo/Desktop/juristack/resources/views/layouts/nav.blade.php ENDPATH**/ ?>
+<?php /**PATH /home/snews/projects/juristack/resources/views/layouts/nav.blade.php ENDPATH**/ ?>

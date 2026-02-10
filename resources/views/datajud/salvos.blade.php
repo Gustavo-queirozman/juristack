@@ -34,8 +34,18 @@
                     $ultimoMov = $processo->movimentos->first();
                     $ultimoMovNome = $ultimoMov ? $ultimoMov->nome : null;
                 @endphp
-                <li class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                    <div class="p-4 sm:p-5">
+                <li class="salvos-processo-card rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow relative"
+                    data-processo-id="{{ $processo->id }}">
+                    <div class="salvos-card-inner p-4 sm:p-5 relative">
+                        <div class="salvos-card-loading hidden absolute inset-0 bg-white/80 z-10 rounded-lg flex items-center justify-center">
+                            <div class="flex flex-col items-center gap-2 text-emerald-700">
+                                <svg class="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span class="text-sm font-medium">Buscando atualizações no DataJud...</span>
+                            </div>
+                        </div>
                         <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
                             <div class="min-w-0">
                                 <p class="font-semibold text-gray-900 truncate">
@@ -76,6 +86,18 @@
                                 Ver detalhes
                             </a>
                             <button type="button"
+                                    class="salvos-atualizar-btn inline-flex items-center gap-1.5 px-3 py-1.5 border border-emerald-200 text-emerald-700 text-sm font-medium rounded-md hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none"
+                                    data-processo-id="{{ $processo->id }}"
+                                    data-atualizar-url="{{ route('datajud.salvo.atualizar', $processo->id) }}">
+                                <span class="salvos-atualizar-label">Atualizar</span>
+                                <span class="salvos-atualizar-spinner hidden inline-flex items-center">
+                                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                            <button type="button"
                                     class="salvos-json-btn inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                                     data-payload-base64="{{ base64_encode(json_encode($processo->payload)) }}">
                                 Ver JSON
@@ -102,6 +124,8 @@
             </div>
         @endif
     @endif
+
+    <div id="salvos-toast" class="fixed bottom-4 right-4 z-[10001] max-w-sm pointer-events-none hidden" role="status" aria-live="polite"></div>
 </div>
 
 {{-- Modal de confirmação de remoção --}}
@@ -169,6 +193,10 @@
     .salvos-confirm-btn-cancel:hover { background: #e2e8f0; }
     .salvos-confirm-btn-danger { background: #dc2626; color: #fff; }
     .salvos-confirm-btn-danger:hover { background: #b91c1c; }
+
+    #salvos-toast .salvos-toast-msg { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    #salvos-toast .salvos-toast-success { background: #d1fae8; color: #065f46; border: 1px solid #a7f3d0; }
+    #salvos-toast .salvos-toast-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 </style>
 
 <script>
@@ -232,6 +260,62 @@
     });
     if (removeModal) removeModal.addEventListener('click', function(e) {
         if (e.target.classList.contains('salvos-confirm-backdrop')) closeRemoveModal();
+    });
+
+    var toastEl = document.getElementById('salvos-toast');
+    function showToast(message, isError) {
+        if (!toastEl) return;
+        toastEl.innerHTML = '<div class="salvos-toast-msg ' + (isError ? 'salvos-toast-error' : 'salvos-toast-success') + '">' + (message || '') + '</div>';
+        toastEl.classList.remove('hidden');
+        setTimeout(function() {
+            toastEl.classList.add('hidden');
+            toastEl.innerHTML = '';
+        }, 5000);
+    }
+
+    document.querySelectorAll('.salvos-atualizar-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var url = this.getAttribute('data-atualizar-url');
+            var card = this.closest('.salvos-processo-card');
+            var loadingEl = card ? card.querySelector('.salvos-card-loading') : null;
+            var label = this.querySelector('.salvos-atualizar-label');
+            var spinner = this.querySelector('.salvos-atualizar-spinner');
+            var csrf = document.querySelector('meta[name="csrf-token"]');
+            var token = (csrf && csrf.getAttribute('content')) ? csrf.getAttribute('content') : '{{ csrf_token() }}';
+
+            this.disabled = true;
+            if (label) label.classList.add('hidden');
+            if (spinner) spinner.classList.remove('hidden');
+            if (loadingEl) loadingEl.classList.remove('hidden');
+
+            var self = this;
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token
+                },
+                body: JSON.stringify({})
+            })
+            .then(function(r) {
+                return r.json().then(function(data) {
+                    if (!r.ok) throw new Error(data.error || 'Erro ao atualizar');
+                    return data;
+                });
+            })
+            .then(function() {
+                showToast('Processo atualizado com sucesso. Atualizando lista…');
+                window.location.reload();
+            })
+            .catch(function(err) {
+                self.disabled = false;
+                if (label) label.classList.remove('hidden');
+                if (spinner) spinner.classList.add('hidden');
+                if (loadingEl) loadingEl.classList.add('hidden');
+                showToast(err.message || 'Não foi possível atualizar este processo.', true);
+            });
+        });
     });
 })();
 </script>

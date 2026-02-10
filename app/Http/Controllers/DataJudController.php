@@ -176,6 +176,71 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
     }
 
     /**
+     * Atualizar processo salvo: reconsulta no DataJud e persiste alterações.
+     */
+    public function atualizarProcesso(Request $request, $id, DatajudPersistService $persist)
+    {
+        $processo = DatajudProcesso::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        $tribunal = $processo->tribunal;
+        $numero = $this->service->normalizeProcessNumber($processo->numero_processo);
+
+        $resp = $tribunal === 'ALL'
+            ? $this->service->searchAll('numero', $numero, 0, 5)
+            : $this->service->searchByProcess($tribunal, $numero, 0, 1);
+
+        if (empty($resp) || empty($resp['hits']['hits'])) {
+            return response()->json(['error' => 'Processo não encontrado no DataJud no momento.'], 404);
+        }
+
+        $hits = $resp['hits']['hits'];
+        $hit = null;
+        foreach ($hits as $h) {
+            $src = $h['_source'] ?? [];
+            $num = $src['numeroProcesso'] ?? $src['numero_processo'] ?? null;
+            if ($num && $this->service->normalizeProcessNumber($num) === $numero) {
+                $hit = $h;
+                break;
+            }
+        }
+        if (! $hit) {
+            $hit = $hits[0];
+        }
+
+        $source = $hit['_source'] ?? [];
+        if (empty($source)) {
+            return response()->json(['error' => 'Dados do processo indisponíveis.'], 502);
+        }
+
+        if (empty($source['numeroProcesso']) && ! empty($source['numero_processo'])) {
+            $source['numeroProcesso'] = $source['numero_processo'];
+        }
+
+        try {
+            $processoAtualizado = $persist->salvarProcesso($source, $tribunal, auth()->id());
+
+            ProcessoMonitor::updateOrCreate(
+                [
+                    'user_id' => auth()->id(),
+                    'processo_id' => $processoAtualizado->id,
+                ],
+                [
+                    'tribunal' => $tribunal,
+                    'numero_processo' => $source['numeroProcesso'] ?? $source['numero_processo'] ?? null,
+                    'ultima_atualizacao_datajud' => $source['dataHoraUltimaAtualizacao'] ?? now(),
+                    'ativo' => true,
+                ]
+            );
+
+            return response()->json(['ok' => true]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Remover processo salvo (apenas proprietário)
      */
     public function deleteSaved(Request $request, $id)
