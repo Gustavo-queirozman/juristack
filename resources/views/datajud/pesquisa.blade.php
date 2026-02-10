@@ -116,6 +116,7 @@
             <label for="tipo_consulta" class="form-label">Tipo de Consulta</label>
             <select id="tipo_consulta" class="form-select">
                 <option value="numero" selected>Número do Processo</option>
+                <option value="advogado">Nome do Advogado</option>
             </select>
         </div>
 
@@ -131,6 +132,22 @@
                 class="form-control"
                 placeholder="Ex: 0001234-56.2023.8.26.0000"
                 value="{{ request('numero_processo') }}"
+            >
+        </div>
+
+
+        {{-- Nome do Advogado --}}
+        <div class="mb-3" id="nome_advogado_wrapper" style="display:none;">
+            <label for="nome_advogado" class="form-label">
+                Nome do Advogado
+            </label>
+            <input
+                type="text"
+                name="nome_advogado"
+                id="nome_advogado"
+                class="form-control"
+                placeholder="Ex: Nelson Mannrich"
+                value="{{ request('nome_advogado') }}"
             >
         </div>
 
@@ -569,7 +586,8 @@
                 e.preventDefault();
                 const tipo = document.getElementById('tipo_consulta') ? document.getElementById('tipo_consulta').value : 'numero';
                 const numVal = (document.getElementById('numero_processo').value || '').trim();
-                const advVal = (document.getElementById('nome_advogado').value || '').trim();
+                const advInput = document.getElementById('nome_advogado');
+                const advVal = advInput ? (advInput.value || '').trim() : '';
                 if (tipo === 'numero' && !numVal) {
                     showToast('info', 'Campo obrigatório', 'Informe o número do processo.');
                     return;
@@ -621,15 +639,19 @@
             // Toggle visibility based on tipo_consulta
             const tipoSelect = document.getElementById('tipo_consulta');
             function toggleFields() {
+                if (!tipoSelect) return;
                 const tipo = tipoSelect.value;
-                const numDiv = document.getElementById('numero_processo').closest('.mb-3');
-                const advDiv = document.getElementById('nome_advogado').closest('.mb-3');
+                const numInput = document.getElementById('numero_processo');
+                const advInput = document.getElementById('nome_advogado');
+                const numDiv = numInput ? numInput.closest('.mb-3') : null;
+                const advDiv = document.getElementById('nome_advogado_wrapper') || (advInput ? advInput.closest('.mb-3') : null);
+
                 if (tipo === 'numero') {
-                    numDiv.style.display = '';
-                    advDiv.style.display = 'none';
+                    if (numDiv) numDiv.style.display = '';
+                    if (advDiv) advDiv.style.display = 'none';
                 } else {
-                    numDiv.style.display = 'none';
-                    advDiv.style.display = '';
+                    if (numDiv) numDiv.style.display = 'none';
+                    if (advDiv) advDiv.style.display = '';
                 }
             }
 
@@ -650,6 +672,5 @@
             })();
         })();
     </script>
-    </form>
 </div>
 @endsection

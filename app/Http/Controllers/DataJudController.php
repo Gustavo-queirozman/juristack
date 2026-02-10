@@ -105,6 +105,38 @@ public function monitorados()
 
 
 
+    /**
+     * Debug endpoint (sem CSRF) para testar consultas rapidamente.
+     */
+    public function debug(Request $request)
+    {
+        $request->validate([
+            'tribunal' => 'required|string',
+            'tipo' => 'required|in:numero,advogado',
+            'valor' => 'required|string',
+            'from' => 'nullable|integer|min:0',
+            'size' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $tribunal = $request->query('tribunal');
+        $tipo = $request->query('tipo');
+        $valor = $request->query('valor');
+        $from = (int) $request->query('from', 0);
+        $size = (int) $request->query('size', 10);
+
+        if ($tipo === 'numero') {
+            $valor = $this->service->normalizeProcessNumber($valor);
+        }
+
+        $resp = $this->service->debugSearch($tribunal, $tipo, $valor, $from, $size);
+
+        if (empty($resp)) {
+            return response()->json(['error' => 'Erro ao consultar o DataJud'], 502);
+        }
+
+        return response()->json($resp);
+    }
+
 public function salvarProcesso(Request $request, DatajudPersistService $persist)
 {
     $request->validate([
