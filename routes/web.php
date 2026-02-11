@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ClienteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DataJudController;
 
@@ -14,6 +15,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/datajud/salvo/{id}/atualizar', [DataJudController::class, 'atualizarProcesso'])->name('datajud.salvo.atualizar');
     Route::delete('/datajud/salvo/{id}', [DataJudController::class, 'deleteSaved'])->name('datajud.salvo.delete');
     Route::post('/datajud/search', [DataJudController::class, 'apiSearch'])->name('datajud.api.search');
+
+    // Clientes CRUD
+    Route::resource('clientes', ClienteController::class);
 });
 
 

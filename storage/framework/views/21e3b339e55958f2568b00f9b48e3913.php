@@ -3,6 +3,7 @@
     $isDashboard = request()->routeIs('dashboard');
     $isPesquisa = request()->routeIs('datajud.index');
     $isSalvos = request()->routeIs('datajud.salvos') || request()->routeIs('datajud.salvo.show');
+    $isClientes = request()->routeIs('clientes.*');
     $isProfile = request()->routeIs('profile.edit');
 ?>
 <aside class="sidebar" aria-label="Navegação principal">
@@ -29,6 +30,16 @@
                 <span class="sidebar-link-icon" aria-hidden="true">📁</span>
                 <span>Processos salvos</span>
             </a>
+        </div>
+        <div class="sidebar-group">
+            <span class="sidebar-group-title">Cadastros</span>
+            <a href="<?php echo e(route('clientes.index')); ?>" class="sidebar-link <?php echo e($isClientes ? 'sidebar-link-active' : ''); ?>">
+                <span class="sidebar-link-icon" aria-hidden="true">👤</span>
+                <span>Clientes</span>
+            </a>
+        </div>
+        <div class="sidebar-group">
+            <span class="sidebar-group-title">Conta</span>
             <a href="<?php echo e(route('profile.edit')); ?>" class="sidebar-link <?php echo e($isProfile ? 'sidebar-link-active' : ''); ?> sidebar-link-muted">
                 <span class="sidebar-link-icon" aria-hidden="true">⚙</span>
                 <span>Configurações</span>

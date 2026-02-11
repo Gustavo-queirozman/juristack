@@ -53,4 +53,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(ProcessoMonitor::class, 'user_id');
     }
+
+    /**
+     * Clientes vinculados ao usuário
+     */
+    public function clientes()
+    {
+        return $this->hasMany(Cliente::class, 'user_id');
+    }
 }
