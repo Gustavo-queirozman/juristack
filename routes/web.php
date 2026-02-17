@@ -4,7 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClienteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DataJudController;
-
+use App\Http\Controllers\CustomerController;
 
 // DataJud routes - require authentication
 Route::middleware('auth')->group(function () {
@@ -21,7 +21,11 @@ Route::middleware('auth')->group(function () {
 });
 
 
-
+Route::resource('customers', CustomerController::class);
+Route::middleware('auth:customer')->group(function () {
+    Route::post('/customers/upload', [CustomerController::class, 'uploadFiles'])
+        ->name('customers.upload');
+});
 
 Route::get('/', function () {
     return view('welcome');

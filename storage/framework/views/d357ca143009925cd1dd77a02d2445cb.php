@@ -103,4 +103,4 @@
 </body>
 </html>
 
-<?php /**PATH /home/snews/projects/juristack/resources/views/layouts/app.blade.php ENDPATH**/ ?>
+<?php /**PATH /var/www/juristack/resources/views/layouts/app.blade.php ENDPATH**/ ?>

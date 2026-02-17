@@ -670,4 +670,4 @@
     </main>
 </body>
 </html>
-<?php /**PATH /home/snews/projects/juristack/resources/views/welcome.blade.php ENDPATH**/ ?>
+<?php /**PATH /var/www/juristack/resources/views/welcome.blade.php ENDPATH**/ ?>

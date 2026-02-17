@@ -7,6 +7,7 @@ use App\Services\DataJudService;
 use App\Services\DatajudPersistService;
 use App\Models\DatajudProcesso;
 use App\Models\ProcessoMonitor;
+
 class DataJudController extends Controller
 {
     protected $service;
@@ -16,20 +17,20 @@ class DataJudController extends Controller
         $this->service = $service;
     }
 
-public function salvos()
-{
+    public function salvos()
+    {
     $processos = DatajudProcesso::with('assuntos')
         ->where('user_id', auth()->id())
         ->latest()
         ->paginate(20);
 
-    return view('datajud.salvos', compact('processos'));
-}
+        return view('datajud.salvos', compact('processos'));
+    }
 
-public function monitorados()
-{
-    return view('datajud.monitorados');
-}
+    public function monitorados()
+    {
+        return view('datajud.monitorados');
+    }
 
     public function pesquisar(Request $request)
     {

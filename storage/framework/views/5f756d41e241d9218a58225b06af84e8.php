@@ -32,4 +32,4 @@
         </div>
     </body>
 </html>
-<?php /**PATH /home/snews/projects/juristack/vendor/laravel/framework/src/Illuminate/Foundation/Exceptions/views/minimal.blade.php ENDPATH**/ ?>
+<?php /**PATH /var/www/juristack/vendor/laravel/framework/src/Illuminate/Foundation/Exceptions/views/minimal.blade.php ENDPATH**/ ?>

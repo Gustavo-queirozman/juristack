@@ -59,4 +59,4 @@
     </div>
     <?php endif; ?>
 </aside>
-<?php /**PATH /home/snews/projects/juristack/resources/views/layouts/nav.blade.php ENDPATH**/ ?>
+<?php /**PATH /var/www/juristack/resources/views/layouts/nav.blade.php ENDPATH**/ ?>
