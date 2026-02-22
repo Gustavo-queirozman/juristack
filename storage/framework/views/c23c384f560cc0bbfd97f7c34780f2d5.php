@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 
-    <title>@yield('title', config('app.name', 'Laravel'))</title>
+    <title><?php echo $__env->yieldContent('title', config('app.name', 'Laravel')); ?></title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js']); ?>
     <style>
         .app-layout { display: flex; height: 100vh; overflow: hidden; }
         .sidebar { width: 240px; flex-shrink: 0; background: #1e293b; color: #e2e8f0; display: flex; flex-direction: column; }
@@ -59,22 +59,22 @@
             .sidebar-footer { width: 100%; padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08); }
         }
     </style>
-    @stack('styles')
+    <?php echo $__env->yieldPushContent('styles'); ?>
 </head>
 <body class="antialiased">
     <div class="app-layout">
-        @include('layouts.nav')
+        <?php echo $__env->make('layouts.nav', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
         <main class="app-main" role="main">
             <div class="app-main-inner">
-                @hasSection('pageTitle')
-                    <h1 class="page-title">@yield('pageTitle')</h1>
-                @endif
-                @isset($slot) {{ $slot }} @else @yield('content') @endisset
+                <?php if (! empty(trim($__env->yieldContent('pageTitle')))): ?>
+                    <h1 class="page-title"><?php echo $__env->yieldContent('pageTitle'); ?></h1>
+                <?php endif; ?>
+                <?php if(isset($slot)): ?> <?php echo e($slot); ?> <?php else: ?> <?php echo $__env->yieldContent('content'); ?> <?php endif; ?>
             </div>
         </main>
     </div>
 
-    @auth
+    <?php if(auth()->guard()->check()): ?>
     <div id="logout-confirm-modal" class="logout-confirm-modal" role="dialog" aria-labelledby="logout-confirm-title" aria-modal="true">
         <div class="logout-confirm-backdrop">
             <div class="logout-confirm-inner">
@@ -104,8 +104,9 @@
         if (modal) modal.addEventListener('click', function(e) { if (e.target.classList.contains('logout-confirm-backdrop')) modal.classList.remove('is-open'); });
     })();
     </script>
-    @endauth
-    @stack('scripts')
+    <?php endif; ?>
+    <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
 </html>
 
+<?php /**PATH /home/snews/projects/juristack/resources/views/layouts/app.blade.php ENDPATH**/ ?>

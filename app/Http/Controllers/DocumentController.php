@@ -11,12 +11,12 @@ use Illuminate\Validation\Rule;
 class DocumentController extends Controller
 {
     /**
-     * listDocuments
-     * List documents (optionally filter by type/template)
+     * List documents (optionally filter by type/template).
+     * Returns view for web, JSON for API.
      */
     public function listDocuments(Request $request)
     {
-        $query = Document::query()->with('template');
+        $query = Document::query()->with(['template', 'customer']);
 
         if ($request->filled('type')) {
             $query->where('type', $request->string('type'));
@@ -28,18 +28,80 @@ class DocumentController extends Controller
 
         $documents = $query->latest()->paginate(15);
 
-        return response()->json($documents);
+        if ($request->expectsJson()) {
+            return response()->json($documents);
+        }
+
+        $templates = \App\Models\DocumentTemplate::orderBy('type')->orderBy('title')->take(8)->get();
+        $allTemplates = \App\Models\DocumentTemplate::orderBy('type')->orderBy('title')->get();
+        $customers = \App\Models\Customer::orderBy('name')->get(['id', 'name', 'cnp', 'email', 'street', 'number', 'neighborhood', 'city', 'state', 'zip_code', 'profession', 'marital_status', 'rg']);
+        return view('documents.index', [
+            'templates' => $templates,
+            'allTemplates' => $allTemplates,
+            'documents' => $documents,
+            'customers' => $customers,
+        ]);
     }
 
     /**
      * showDocument
-     * Show a single document
+     * Show a single document (JSON for API).
      */
-    public function showDocument(int $id)
+    public function showDocument(Request $request, int $id)
     {
-        $document = Document::with('template')->findOrFail($id);
+        $document = Document::with(['template', 'customer'])->findOrFail($id);
+        if ($request->expectsJson()) {
+            return response()->json($document);
+        }
+        return view('documents.show', ['document' => $document]);
+    }
 
-        return response()->json($document);
+    /**
+     * Download the generated document file (PDF).
+     */
+    public function download(int $id)
+    {
+        $document = Document::findOrFail($id);
+        if (empty($document->document_link)) {
+            abort(404, 'Arquivo não encontrado.');
+        }
+        $path = preg_replace('#^/storage/#', '', parse_url($document->document_link, PHP_URL_PATH));
+        if (!Storage::disk('public')->exists($path)) {
+            abort(404, 'Arquivo não encontrado.');
+        }
+        $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $document->title) . '.pdf';
+        return Storage::disk('public')->download($path, $safeName, ['Content-Type' => 'application/pdf']);
+    }
+
+    /**
+     * destroyDocument
+     * Delete a document.
+     */
+    public function destroyDocument(Request $request, int $id)
+    {
+        $document = Document::findOrFail($id);
+        $document->delete();
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Document deleted successfully.']);
+        }
+        return redirect()->route('documents.index')->with('success', 'Documento excluído.');
+    }
+
+    /**
+     * Show form to create a document from a template (web).
+     */
+    public function createFromTemplate(Request $request)
+    {
+        if (!$request->filled('template_id')) {
+            return redirect()->route('documents.index')->with('error', 'Selecione um modelo.');
+        }
+        $templateId = $request->integer('template_id');
+        $template = DocumentTemplate::findOrFail($templateId);
+        $customers = \App\Models\Customer::orderBy('name')->get(['id', 'name']);
+        return view('documents.create-from-template', [
+            'template' => $template,
+            'customers' => $customers,
+        ]);
     }
 
     /**
@@ -50,17 +112,15 @@ class DocumentController extends Controller
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'type'  => ['required', Rule::in(Document::TYPES)],
+            'type'  => ['required', Rule::in(array_keys(Document::TYPES))],
             'document_template_id' => ['required', 'exists:document_templates,id'],
 
-            // One of these can be used:
             'document_link' => ['nullable', 'url', 'max:2048'],
-            'document_file' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:10240'], // 10MB
+            'document_file' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:10240'],
 
             'form_link' => ['nullable', 'url', 'max:2048'],
         ]);
 
-        // If a file is uploaded, store it and set document_link to stored URL.
         if ($request->hasFile('document_file')) {
             $path = $request->file('document_file')->store('documents', 'public');
             $validated['document_link'] = Storage::disk('public')->url($path);
@@ -74,10 +134,13 @@ class DocumentController extends Controller
             'document_template_id' => $validated['document_template_id'],
         ]);
 
-        return response()->json([
-            'message' => 'Document created successfully.',
-            'data' => $document->load('template'),
-        ], 201);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Document created successfully.',
+                'data' => $document->load('template'),
+            ], 201);
+        }
+        return redirect()->route('documents.index')->with('success', 'Documento criado com sucesso.');
     }
 
     /**
@@ -90,7 +153,7 @@ class DocumentController extends Controller
 
         $validated = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'type'  => ['sometimes', 'required', Rule::in(Document::TYPES)],
+            'type'  => ['sometimes', 'required', Rule::in(array_keys(Document::TYPES))],
             'document_template_id' => ['sometimes', 'required', 'exists:document_templates,id'],
 
             'document_link' => ['nullable', 'url', 'max:2048'],
@@ -106,10 +169,13 @@ class DocumentController extends Controller
 
         $document->update($validated);
 
-        return response()->json([
-            'message' => 'Document updated successfully.',
-            'data' => $document->fresh()->load('template'),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Document updated successfully.',
+                'data' => $document->fresh()->load('template'),
+            ]);
+        }
+        return redirect()->route('documents.index')->with('success', 'Documento atualizado.');
     }
 
     /**
@@ -124,7 +190,7 @@ class DocumentController extends Controller
      */
     public function generateDocument(Request $request, int $id)
     {
-        $document = Document::with('template')->findOrFail($id);
+        $document = Document::with(['template', 'customer'])->findOrFail($id);
 
         // Example payload validation (variables to merge)
         $validated = $request->validate([

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataJudController;
@@ -20,54 +21,40 @@ Route::middleware('auth')->group(function () {
     Route::post('/datajud/search', [DataJudController::class, 'apiSearch'])->name('datajud.api.search');
 
     // Usuários (CRUD) – rota /users
-  // Route::resource('users', UserController::class)->parameters(['user' => 'cliente']);
-   Route::get('/users', [UserController::class])->name('users.index');
-//   Route::get('/user',[UserController::class])->parameters(['user'=> 'cliente']);
-   Route::post('/user', [UserController::class])->name('users.create');
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/user', [UserController::class, 'store'])->name('users.create');
 
     // Customers CRUD (cadastro completo + arquivos)
     Route::resource('customers', CustomerController::class);
     Route::post('customers/{customer}/files', [CustomerController::class, 'uploadForCustomer'])->name('customers.files.store');
     Route::get('customers/{customer}/files/{file}/download', [CustomerController::class, 'downloadFile'])->name('customers.files.download');
     Route::delete('customers/{customer}/files/{file}', [CustomerController::class, 'destroyFile'])->name('customers.files.destroy');
-});
 
+    // Documentos e modelos (requer auth)
+    Route::get('/documents', [DocumentController::class, 'listDocuments'])->name('documents.index');
+    Route::get('/documents/create', [DocumentController::class, 'createFromTemplate'])->name('documents.create');
+    Route::post('/documents', [DocumentController::class, 'createDocument'])->name('documents.store');
+    Route::get('/documents/{id}', [DocumentController::class, 'showDocument'])->name('documents.show');
+    Route::get('/documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
+    Route::put('/documents/{id}', [DocumentController::class, 'updateDocument'])->name('documents.update');
+    Route::patch('/documents/{id}', [DocumentController::class, 'updateDocument']);
+    Route::delete('/documents/{id}', [DocumentController::class, 'destroyDocument'])->name('documents.destroy');
+    Route::post('/documents/{id}/generate', [DocumentController::class, 'generateDocument'])->name('documents.generate');
+    Route::post('/documents/{id}/form', [DocumentController::class, 'createForm']);
+    Route::get('/documents/{id}/form', [DocumentController::class, 'showForm']);
+    Route::put('/documents/{id}/form', [DocumentController::class, 'updateForm']);
+    Route::patch('/documents/{id}/form', [DocumentController::class, 'updateForm']);
 
-
-Route::prefix('document-templates')->group(function () {
-    Route::get('/', [DocumentTemplateController::class, 'index']);     // List templates
-    Route::get('/{id}', [DocumentTemplateController::class, 'show']);  // Show single template
-    Route::post('/', [DocumentTemplateController::class, 'store']);    // Create template
-    Route::put('/{id}', [DocumentTemplateController::class, 'update']); // Update template
-    Route::patch('/{id}', [DocumentTemplateController::class, 'update']); // Partial update
-    Route::delete('/{id}', [DocumentTemplateController::class, 'destroy']); // Delete template
-});
-
-
-Route::prefix('documents')->group(function () {
-    // List documents (with filters)
-    Route::get('/', [DocumentController::class, 'listDocuments']);
-    // Show single document
-    Route::get('/{id}', [DocumentController::class, 'showDocument']);
-    // Create document
-    Route::post('/', [DocumentController::class, 'createDocument']);
-    // Update document
-    Route::put('/{id}', [DocumentController::class, 'updateDocument']);
-    Route::patch('/{id}', [DocumentController::class, 'updateDocument']);
-    // Generate document from template
-    Route::post('/{id}/generate', [DocumentController::class, 'generateDocument']);
-    /*
-    |--------------------------------------------------------------------------
-    | Form Routes (Nested Resource Style)
-    |--------------------------------------------------------------------------
-    */
-    // Create/attach form
-    Route::post('/{id}/form', [DocumentController::class, 'createForm']);
-    // Show form
-    Route::get('/{id}/form', [DocumentController::class, 'showForm']);
-    // Update form
-    Route::put('/{id}/form', [DocumentController::class, 'updateForm']);
-    Route::patch('/{id}/form', [DocumentController::class, 'updateForm']);
+    Route::get('/document-templates', [DocumentTemplateController::class, 'index'])->name('document-templates.index');
+    Route::get('/document-templates/create', [DocumentTemplateController::class, 'create'])->name('document-templates.create');
+    Route::post('/document-templates', [DocumentTemplateController::class, 'store'])->name('document-templates.store');
+    Route::get('/document-templates/{id}', [DocumentTemplateController::class, 'show'])->name('document-templates.show');
+    Route::get('/document-templates/{id}/preencher', [DocumentTemplateController::class, 'showFillForm'])->name('document-templates.fill');
+    Route::post('/document-templates/{id}/gerar', [DocumentTemplateController::class, 'generateDocument'])->name('document-templates.generate');
+    Route::get('/document-templates/{id}/edit', [DocumentTemplateController::class, 'edit'])->name('document-templates.edit');
+    Route::put('/document-templates/{id}', [DocumentTemplateController::class, 'update'])->name('document-templates.update');
+    Route::patch('/document-templates/{id}', [DocumentTemplateController::class, 'update']);
+    Route::delete('/document-templates/{id}', [DocumentTemplateController::class, 'destroy'])->name('document-templates.destroy');
 });
 
 Route::middleware('auth:customer')->group(function () {
