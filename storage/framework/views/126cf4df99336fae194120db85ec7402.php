@@ -1,35 +1,35 @@
-@extends('layouts.app')
+<?php $__env->startSection('pageTitle', 'Detalhes do processo'); ?>
 
-@section('pageTitle', 'Detalhes do processo')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="w-full max-w-full">
     <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div class="min-w-0">
-            <a href="{{ route('datajud.salvos') }}" class="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-indigo-600 font-medium mb-2">
+            <a href="<?php echo e(route('datajud.salvos')); ?>" class="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-indigo-600 font-medium mb-2">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 Processos salvos
             </a>
             <h1 class="text-xl font-semibold text-gray-900 mt-0 mb-1 font-mono">
-                {{ $processo->numero_processo }}
+                <?php echo e($processo->numero_processo); ?>
+
             </h1>
             <div class="flex flex-wrap items-center gap-2">
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
-                    {{ $processo->tribunal }}
+                    <?php echo e($processo->tribunal); ?>
+
                 </span>
-                @if($processo->classe_nome)
-                    <span class="text-sm text-gray-500">{{ $processo->classe_nome }}</span>
-                @endif
+                <?php if($processo->classe_nome): ?>
+                    <span class="text-sm text-gray-500"><?php echo e($processo->classe_nome); ?></span>
+                <?php endif; ?>
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a href="{{ route('datajud.salvos') }}"
+            <a href="<?php echo e(route('datajud.salvos')); ?>"
                class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                 Voltar
             </a>
             <button type="button" id="salvo-atualizar-btn"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-emerald-200 text-emerald-700 text-sm font-medium rounded-md hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none"
-                    data-url="{{ route('datajud.salvo.atualizar', $processo->id) }}">
+                    data-url="<?php echo e(route('datajud.salvo.atualizar', $processo->id)); ?>">
                 <span id="salvo-atualizar-label">Atualizar dados</span>
                 <span id="salvo-atualizar-spinner" class="hidden inline-flex"><svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></span>
             </button>
@@ -41,7 +41,7 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {{-- Informações do processo --}}
+        
         <div class="lg:col-span-1">
             <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
@@ -50,28 +50,28 @@
                 <div class="p-4 space-y-3 text-sm">
                     <div>
                         <p class="text-gray-500 font-medium m-0 mb-0.5">Data de ajuizamento</p>
-                        <p class="text-gray-900 m-0">{{ $processo->data_ajuizamento ? $processo->data_ajuizamento->format('d/m/Y') : '—' }}</p>
+                        <p class="text-gray-900 m-0"><?php echo e($processo->data_ajuizamento ? $processo->data_ajuizamento->format('d/m/Y') : '—'); ?></p>
                     </div>
                     <div>
                         <p class="text-gray-500 font-medium m-0 mb-0.5">Última atualização</p>
-                        <p class="text-gray-900 m-0">{{ $processo->datahora_ultima_atualizacao ? $processo->datahora_ultima_atualizacao->format('d/m/Y H:i') : '—' }}</p>
+                        <p class="text-gray-900 m-0"><?php echo e($processo->datahora_ultima_atualizacao ? $processo->datahora_ultima_atualizacao->format('d/m/Y H:i') : '—'); ?></p>
                     </div>
-                    @if($processo->orgao_julgador_nome)
+                    <?php if($processo->orgao_julgador_nome): ?>
                         <div>
                             <p class="text-gray-500 font-medium m-0 mb-0.5">Juízo / Órgão</p>
-                            <p class="text-gray-900 m-0">{{ $processo->orgao_julgador_nome }}</p>
+                            <p class="text-gray-900 m-0"><?php echo e($processo->orgao_julgador_nome); ?></p>
                         </div>
-                    @endif
-                    @if($processo->assuntos->count())
+                    <?php endif; ?>
+                    <?php if($processo->assuntos->count()): ?>
                         <div>
                             <p class="text-gray-500 font-medium m-0 mb-0.5">Assuntos</p>
-                            <p class="text-gray-900 m-0">{{ $processo->assuntos->pluck('nome')->implode(', ') }}</p>
+                            <p class="text-gray-900 m-0"><?php echo e($processo->assuntos->pluck('nome')->implode(', ')); ?></p>
                         </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
 
-            {{-- JSON (collapsible) --}}
+            
             <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden mt-6">
                 <details class="group">
                     <summary class="px-4 py-3 border-b border-gray-200 bg-gray-50 cursor-pointer list-none flex items-center justify-between gap-2 text-sm font-medium text-gray-700 hover:bg-gray-100">
@@ -80,55 +80,55 @@
                     </summary>
                     <div class="p-4">
                         <div class="max-h-[70vh] overflow-y-auto pr-1 -mr-1 rounded-lg">
-                            <pre class="m-0 p-4 rounded-lg bg-slate-900 text-sky-100 text-xs whitespace-pre-wrap break-words">{{ json_encode($processo->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                            <pre class="m-0 p-4 rounded-lg bg-slate-900 text-sky-100 text-xs whitespace-pre-wrap break-words"><?php echo e(json_encode($processo->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)); ?></pre>
                         </div>
                     </div>
                 </details>
             </div>
         </div>
 
-        {{-- Movimentações --}}
+        
         <div class="lg:col-span-2">
             <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                     <h2 class="text-sm font-semibold text-gray-900 m-0">Movimentações</h2>
-                    @if($processo->movimentos->count())
-                        <span class="text-xs text-gray-500">{{ $processo->movimentos->count() }} registro(s)</span>
-                    @endif
+                    <?php if($processo->movimentos->count()): ?>
+                        <span class="text-xs text-gray-500"><?php echo e($processo->movimentos->count()); ?> registro(s)</span>
+                    <?php endif; ?>
                 </div>
                 <div class="p-4">
-                    @if($processo->movimentos->count())
+                    <?php if($processo->movimentos->count()): ?>
                         <div class="max-h-[70vh] overflow-y-auto pr-1 -mr-1">
                         <ul class="relative space-y-0 list-none p-0 m-0">
-                            @foreach($processo->movimentos as $index => $mov)
-                                <li class="flex gap-4 pb-4 last:pb-0 {{ !$loop->last ? 'border-b border-gray-100' : '' }} {{ !$loop->first ? 'pt-4' : '' }}">
+                            <?php $__currentLoopData = $processo->movimentos; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $mov): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <li class="flex gap-4 pb-4 last:pb-0 <?php echo e(!$loop->last ? 'border-b border-gray-100' : ''); ?> <?php echo e(!$loop->first ? 'pt-4' : ''); ?>">
                                     <div class="shrink-0 w-24 text-xs text-gray-500 font-medium pt-0.5">
-                                        {{ $mov->data_hora ? $mov->data_hora->format('d/m/Y') : '—' }}<br>
-                                        <span class="text-gray-400">{{ $mov->data_hora ? $mov->data_hora->format('H:i') : '' }}</span>
+                                        <?php echo e($mov->data_hora ? $mov->data_hora->format('d/m/Y') : '—'); ?><br>
+                                        <span class="text-gray-400"><?php echo e($mov->data_hora ? $mov->data_hora->format('H:i') : ''); ?></span>
                                     </div>
                                     <div class="min-w-0 flex-1">
-                                        <p class="font-medium text-gray-900 m-0">{{ $mov->nome }}</p>
-                                        @if($mov->complementos->count())
-                                            @php $complementos = $mov->complementos->pluck('descricao')->filter(); @endphp
-                                            @if($complementos->isNotEmpty())
-                                                <p class="text-sm text-gray-500 mt-1 mb-0">{{ $complementos->implode(' · ') }}</p>
-                                            @endif
-                                        @endif
+                                        <p class="font-medium text-gray-900 m-0"><?php echo e($mov->nome); ?></p>
+                                        <?php if($mov->complementos->count()): ?>
+                                            <?php $complementos = $mov->complementos->pluck('descricao')->filter(); ?>
+                                            <?php if($complementos->isNotEmpty()): ?>
+                                                <p class="text-sm text-gray-500 mt-1 mb-0"><?php echo e($complementos->implode(' · ')); ?></p>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
                                     </div>
                                 </li>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </ul>
                         </div>
-                    @else
+                    <?php else: ?>
                         <p class="text-gray-500 text-sm m-0 py-4">Nenhum movimento registrado.</p>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-{{-- Modal confirmação remoção --}}
+
 <div id="salvoRemoveModal" class="fixed inset-0 z-[10000] hidden items-center justify-center p-4" role="dialog" aria-labelledby="salvoRemoveModalTitle" aria-modal="true">
     <div class="absolute inset-0 bg-black/50" id="salvoRemoveBackdrop"></div>
     <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6">
@@ -141,9 +141,9 @@
     </div>
 </div>
 
-<form method="POST" action="{{ route('datajud.salvo.delete', $processo->id) }}" id="salvo-remove-form" class="hidden">
-    @csrf
-    @method('DELETE')
+<form method="POST" action="<?php echo e(route('datajud.salvo.delete', $processo->id)); ?>" id="salvo-remove-form" class="hidden">
+    <?php echo csrf_field(); ?>
+    <?php echo method_field('DELETE'); ?>
 </form>
 
 <style>
@@ -209,4 +209,6 @@
     }
 })();
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /home/snews/projects/juristack/resources/views/datajud/salvo.blade.php ENDPATH**/ ?>

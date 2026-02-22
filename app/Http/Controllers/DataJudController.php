@@ -17,14 +17,20 @@ class DataJudController extends Controller
         $this->service = $service;
     }
 
-    public function salvos()
+    public function salvos(Request $request)
     {
-    $processos = DatajudProcesso::with('assuntos')
-        ->where('user_id', auth()->id())
-        ->latest()
-        ->paginate(20);
+        $query = DatajudProcesso::with('assuntos')
+            ->where('user_id', auth()->id());
 
-        return view('datajud.salvos', compact('processos'));
+        $busca = $request->get('busca');
+        if ($busca !== null && $busca !== '') {
+            $term = '%' . trim(preg_replace('/\s+/', '%', $busca)) . '%';
+            $query->where('numero_processo', 'like', $term);
+        }
+
+        $processos = $query->latest()->paginate(20)->withQueryString();
+
+        return view('datajud.salvos', compact('processos', 'busca'));
     }
 
     public function monitorados()
