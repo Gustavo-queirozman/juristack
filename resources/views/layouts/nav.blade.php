@@ -12,10 +12,6 @@
         <a href="{{ url('/') }}" class="sidebar-brand">{{ config('app.name', 'JuriStack') }}</a>
     </div>
     <nav class="sidebar-nav">
-        <a href="{{ url('/') }}" class="sidebar-link {{ $isHome ? 'sidebar-link-active' : '' }}">
-            <span class="sidebar-link-icon" aria-hidden="true">⌂</span>
-            <span>Início</span>
-        </a>
         @auth
         <a href="{{ route('dashboard') }}" class="sidebar-link {{ $isDashboard ? 'sidebar-link-active' : '' }}">
             <span class="sidebar-link-icon" aria-hidden="true">▣</span>

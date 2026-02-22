@@ -12,10 +12,6 @@
         <a href="<?php echo e(url('/')); ?>" class="sidebar-brand"><?php echo e(config('app.name', 'JuriStack')); ?></a>
     </div>
     <nav class="sidebar-nav">
-        <a href="<?php echo e(url('/')); ?>" class="sidebar-link <?php echo e($isHome ? 'sidebar-link-active' : ''); ?>">
-            <span class="sidebar-link-icon" aria-hidden="true">⌂</span>
-            <span>Início</span>
-        </a>
         <?php if(auth()->guard()->check()): ?>
         <a href="<?php echo e(route('dashboard')); ?>" class="sidebar-link <?php echo e($isDashboard ? 'sidebar-link-active' : ''); ?>">
             <span class="sidebar-link-icon" aria-hidden="true">▣</span>
