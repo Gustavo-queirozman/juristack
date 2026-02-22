@@ -7,7 +7,7 @@ use App\Http\Requests\UpdateClienteRequest;
 use App\Models\Cliente;
 use Illuminate\Http\Request;
 
-class ClienteController extends Controller
+class UserController extends Controller
 {
     public function index(Request $request)
     {
