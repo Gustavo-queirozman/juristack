@@ -56,7 +56,8 @@
             @endif
         </div>
     @else
-        <div class="space-y-4">
+        <div class="max-h-[70vh] overflow-y-auto pr-1 -mr-1">
+            <div class="space-y-4">
             @foreach($processos as $processo)
                 @php
                     $ultimoMov = $processo->movimentos->first();
@@ -148,6 +149,7 @@
                     </div>
                 </article>
             @endforeach
+            </div>
         </div>
 
         @if($processos->hasPages())

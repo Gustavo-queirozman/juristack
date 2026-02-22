@@ -12,15 +12,17 @@
         .app-layout { display: flex; min-height: 100vh; }
         .sidebar { width: 240px; flex-shrink: 0; background: #1e293b; color: #e2e8f0; display: flex; flex-direction: column; }
         .sidebar-header { padding: 1.25rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .sidebar-brand { font-size: 1.125rem; font-weight: 700; color: #fff; text-decoration: none; letter-spacing: -0.02em; }
+        .sidebar-brand { font-size: 1.125rem; font-weight: 700; color: #fff; text-decoration: none; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem; }
         .sidebar-brand:hover { color: #cbd5e1; }
+        .sidebar-brand-icon { width: 1.75rem; height: 1.75rem; flex-shrink: 0; }
         .sidebar-nav { flex: 1; padding: 0.75rem 0; overflow-y: auto; }
         .sidebar-group { padding: 0 0.75rem; margin-top: 1rem; }
         .sidebar-group-title { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; padding: 0 0.5rem 0.375rem; display: block; }
         .sidebar-link { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 1rem; margin: 0 0.5rem; color: #cbd5e1; text-decoration: none; font-size: 0.9375rem; border-radius: 6px; transition: background 0.15s, color 0.15s; }
         .sidebar-link:hover { background: rgba(255,255,255,0.08); color: #f1f5f9; }
         .sidebar-link-active { background: rgba(99, 102, 241, 0.25); color: #c7d2fe; font-weight: 500; border-left: 3px solid #6366f1; margin-left: 0.5rem; padding-left: calc(1rem - 3px); }
-        .sidebar-link-icon { font-size: 1.125rem; opacity: 0.9; width: 1.5rem; text-align: center; }
+        .sidebar-link-icon { width: 1.25rem; height: 1.25rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; opacity: 0.9; }
+        .sidebar-link-icon svg { width: 100%; height: 100%; }
         .sidebar-footer { padding: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); }
         .sidebar-logout-form { margin: 0; padding: 0; }
         .sidebar-link-logout { width: 100%; background: none; border: none; cursor: pointer; font: inherit; color: #94a3b8; font-size: 0.875rem; display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 1rem; margin: 0 0.5rem; border-radius: 6px; transition: background 0.15s, color 0.15s; }

@@ -1,63 +1,89 @@
-@extends('layouts.app')
+<?php $__env->startSection('pageTitle', 'Configurações'); ?>
 
-@section('pageTitle', 'Configurações')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="w-full max-w-full">
     <p class="text-gray-600 text-sm mb-6">
         Gerencie suas informações de perfil, senha e preferências da conta.
     </p>
 
-    @if(session('status') === 'profile-updated')
+    <?php if(session('status') === 'profile-updated'): ?>
         <div class="mb-4 rounded-md bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
             Perfil atualizado com sucesso.
         </div>
-    @endif
-    @if(session('status') === 'password-updated')
+    <?php endif; ?>
+    <?php if(session('status') === 'password-updated'): ?>
         <div class="mb-4 rounded-md bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
             Senha atualizada com sucesso.
         </div>
-    @endif
+    <?php endif; ?>
 
     <div class="space-y-6 max-w-2xl">
-        {{-- Informações do perfil --}}
+        
         <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
                 <h2 class="text-sm font-semibold text-gray-900 m-0">Informações do perfil</h2>
                 <p class="text-xs text-gray-500 mt-0.5 m-0">Atualize seu nome e endereço de e-mail.</p>
             </div>
             <div class="p-4">
-                <form method="post" action="{{ route('profile.update') }}" class="space-y-4">
-                    @csrf
-                    @method('patch')
+                <form method="post" action="<?php echo e(route('profile.update')); ?>" class="space-y-4">
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('patch'); ?>
 
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                        <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" required autocomplete="name"
-                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 @error('name') border-red-500 @enderror">
-                        @error('name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <input id="name" name="name" type="text" value="<?php echo e(old('name', $user->name)); ?>" required autocomplete="name"
+                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 <?php $__errorArgs = ['name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>">
+                        <?php $__errorArgs = ['name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                     </div>
 
                     <div>
                         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-                        <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required autocomplete="username"
-                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 @error('email') border-red-500 @enderror">
-                        @error('email')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <input id="email" name="email" type="email" value="<?php echo e(old('email', $user->email)); ?>" required autocomplete="username"
+                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>">
+                        <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
 
-                        @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
+                        <?php if($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail()): ?>
                             <p class="text-sm mt-2 text-gray-600">
                                 Seu e-mail ainda não foi verificado.
-                                <form id="send-verification" method="post" action="{{ route('verification.send') }}" class="inline">
-                                    @csrf
+                                <form id="send-verification" method="post" action="<?php echo e(route('verification.send')); ?>" class="inline">
+                                    <?php echo csrf_field(); ?>
                                     <button type="submit" class="text-indigo-600 hover:text-indigo-800 font-medium underline">
                                         Reenviar e-mail de verificação
                                     </button>
                                 </form>
                             </p>
-                            @if (session('status') === 'verification-link-sent')
+                            <?php if(session('status') === 'verification-link-sent'): ?>
                                 <p class="mt-2 text-sm text-emerald-600">Um novo link de verificação foi enviado para o seu e-mail.</p>
-                            @endif
-                        @endif
+                            <?php endif; ?>
+                        <?php endif; ?>
                     </div>
 
                     <div class="flex items-center gap-3">
@@ -69,36 +95,36 @@
             </div>
         </div>
 
-        {{-- Atualizar senha --}}
+        
         <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
                 <h2 class="text-sm font-semibold text-gray-900 m-0">Atualizar senha</h2>
                 <p class="text-xs text-gray-500 mt-0.5 m-0">Use uma senha longa e aleatória para manter sua conta segura.</p>
             </div>
             <div class="p-4">
-                <form method="post" action="{{ route('password.update') }}" class="space-y-4">
-                    @csrf
-                    @method('put')
+                <form method="post" action="<?php echo e(route('password.update')); ?>" class="space-y-4">
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('put'); ?>
 
                     <div>
                         <label for="update_password_current_password" class="block text-sm font-medium text-gray-700 mb-1">Senha atual</label>
                         <input id="update_password_current_password" name="current_password" type="password" autocomplete="current-password"
-                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 {{ optional($errors->getBag('updatePassword'))->has('current_password') ? 'border-red-500' : '' }}">
-                        @if(optional($errors->getBag('updatePassword'))->has('current_password'))<p class="mt-1 text-sm text-red-600">{{ $errors->getBag('updatePassword')->first('current_password') }}</p>@endif
+                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 <?php echo e(optional($errors->getBag('updatePassword'))->has('current_password') ? 'border-red-500' : ''); ?>">
+                        <?php if(optional($errors->getBag('updatePassword'))->has('current_password')): ?><p class="mt-1 text-sm text-red-600"><?php echo e($errors->getBag('updatePassword')->first('current_password')); ?></p><?php endif; ?>
                     </div>
 
                     <div>
                         <label for="update_password_password" class="block text-sm font-medium text-gray-700 mb-1">Nova senha</label>
                         <input id="update_password_password" name="password" type="password" autocomplete="new-password"
-                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 {{ optional($errors->getBag('updatePassword'))->has('password') ? 'border-red-500' : '' }}">
-                        @if(optional($errors->getBag('updatePassword'))->has('password'))<p class="mt-1 text-sm text-red-600">{{ $errors->getBag('updatePassword')->first('password') }}</p>@endif
+                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 <?php echo e(optional($errors->getBag('updatePassword'))->has('password') ? 'border-red-500' : ''); ?>">
+                        <?php if(optional($errors->getBag('updatePassword'))->has('password')): ?><p class="mt-1 text-sm text-red-600"><?php echo e($errors->getBag('updatePassword')->first('password')); ?></p><?php endif; ?>
                     </div>
 
                     <div>
                         <label for="update_password_password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirmar nova senha</label>
                         <input id="update_password_password_confirmation" name="password_confirmation" type="password" autocomplete="new-password"
-                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 {{ optional($errors->getBag('updatePassword'))->has('password_confirmation') ? 'border-red-500' : '' }}">
-                        @if(optional($errors->getBag('updatePassword'))->has('password_confirmation'))<p class="mt-1 text-sm text-red-600">{{ $errors->getBag('updatePassword')->first('password_confirmation') }}</p>@endif
+                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 <?php echo e(optional($errors->getBag('updatePassword'))->has('password_confirmation') ? 'border-red-500' : ''); ?>">
+                        <?php if(optional($errors->getBag('updatePassword'))->has('password_confirmation')): ?><p class="mt-1 text-sm text-red-600"><?php echo e($errors->getBag('updatePassword')->first('password_confirmation')); ?></p><?php endif; ?>
                     </div>
 
                     <div class="flex items-center gap-3">
@@ -110,7 +136,7 @@
             </div>
         </div>
 
-        {{-- Excluir conta --}}
+        
         <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
                 <h2 class="text-sm font-semibold text-gray-900 m-0">Excluir conta</h2>
@@ -129,7 +155,7 @@
     </div>
 </div>
 
-{{-- Modal confirmar exclusão da conta --}}
+
 <div id="profile-delete-modal" class="fixed inset-0 z-[10000] hidden items-center justify-center p-4" role="dialog" aria-labelledby="profile-delete-modal-title" aria-modal="true">
     <div class="absolute inset-0 bg-black/50" id="profile-delete-backdrop"></div>
     <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6">
@@ -138,15 +164,15 @@
             Tem certeza que deseja excluir sua conta? Após a exclusão, todos os dados serão removidos permanentemente. Digite sua senha para confirmar.
         </p>
 
-        <form method="post" action="{{ route('profile.destroy') }}" id="profile-delete-form">
-            @csrf
-            @method('delete')
+        <form method="post" action="<?php echo e(route('profile.destroy')); ?>" id="profile-delete-form">
+            <?php echo csrf_field(); ?>
+            <?php echo method_field('delete'); ?>
 
             <div class="mb-4">
                 <label for="profile-delete-password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
                 <input id="profile-delete-password" name="password" type="password" placeholder="Sua senha" required
-                       class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 {{ $errors->userDeletion->has('password') ? 'border-red-500' : '' }}">
-                @if($errors->userDeletion->has('password'))<p class="mt-1 text-sm text-red-600">{{ $errors->userDeletion->first('password') }}</p>@endif
+                       class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 <?php echo e($errors->userDeletion->has('password') ? 'border-red-500' : ''); ?>">
+                <?php if($errors->userDeletion->has('password')): ?><p class="mt-1 text-sm text-red-600"><?php echo e($errors->userDeletion->first('password')); ?></p><?php endif; ?>
             </div>
 
             <div class="flex gap-2 justify-end">
@@ -172,9 +198,11 @@
     if (cancelBtn) cancelBtn.addEventListener('click', function() { modal.classList.remove('is-open'); });
     if (backdrop) backdrop.addEventListener('click', function() { modal.classList.remove('is-open'); });
 
-    @if($errors->userDeletion->isNotEmpty())
+    <?php if($errors->userDeletion->isNotEmpty()): ?>
     if (modal) modal.classList.add('is-open');
-    @endif
+    <?php endif; ?>
 })();
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /home/snews/projects/juristack/resources/views/profile/edit.blade.php ENDPATH**/ ?>

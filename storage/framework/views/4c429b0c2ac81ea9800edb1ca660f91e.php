@@ -54,7 +54,8 @@
             <?php endif; ?>
         </div>
     <?php else: ?>
-        <div class="space-y-4">
+        <div class="max-h-[70vh] overflow-y-auto pr-1 -mr-1">
+            <div class="space-y-4">
             <?php $__currentLoopData = $processos; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $processo): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                 <?php
                     $ultimoMov = $processo->movimentos->first();
@@ -149,6 +150,7 @@
                     </div>
                 </article>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </div>
         </div>
 
         <?php if($processos->hasPages()): ?>
