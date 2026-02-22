@@ -16,12 +16,16 @@ Route::middleware('auth')->group(function () {
     Route::delete('/datajud/salvo/{id}', [DataJudController::class, 'deleteSaved'])->name('datajud.salvo.delete');
     Route::post('/datajud/search', [DataJudController::class, 'apiSearch'])->name('datajud.api.search');
 
-    // Clientes CRUD
-    Route::resource('clientes', ClienteController::class);
+    // Usuários (CRUD) – rota /users
+    Route::resource('users', ClienteController::class)->parameters(['user' => 'cliente']);
+
+    // Customers CRUD (cadastro completo + arquivos)
+    Route::resource('customers', CustomerController::class);
+    Route::post('customers/{customer}/files', [CustomerController::class, 'uploadForCustomer'])->name('customers.files.store');
+    Route::get('customers/{customer}/files/{file}/download', [CustomerController::class, 'downloadFile'])->name('customers.files.download');
+    Route::delete('customers/{customer}/files/{file}', [CustomerController::class, 'destroyFile'])->name('customers.files.destroy');
 });
 
-
-Route::resource('customers', CustomerController::class);
 Route::middleware('auth:customer')->group(function () {
     Route::post('/customers/upload', [CustomerController::class, 'uploadFiles'])
         ->name('customers.upload');

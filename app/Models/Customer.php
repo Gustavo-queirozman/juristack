@@ -51,6 +51,12 @@ class Customer extends Authenticatable
 
 protected $casts = [
     'tags' => 'array',
+    'birth_date' => 'date',
+    'rg_issue_date' => 'date',
+    'cnh_issue_date' => 'date',
+    'cnh_expiration_date' => 'date',
+    'father_birth_date' => 'date',
+    'mother_birth_date' => 'date',
 ];
 
 }

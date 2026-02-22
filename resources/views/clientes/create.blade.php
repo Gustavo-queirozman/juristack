@@ -8,7 +8,7 @@
         Cadastre um novo cliente (Pessoa Física ou Jurídica).
     </p>
 
-    <form method="POST" action="{{ route('clientes.store') }}" class="space-y-6">
+    <form method="POST" action="{{ route('users.store') }}" class="space-y-6">
         @csrf
 
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -131,7 +131,7 @@
             <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                 Cadastrar cliente
             </button>
-            <a href="{{ route('clientes.index') }}" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50">
+            <a href="{{ route('users.index') }}" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50">
                 Cancelar
             </a>
         </div>

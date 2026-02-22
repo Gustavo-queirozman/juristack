@@ -8,7 +8,7 @@
         Edite os dados do cliente.
     </p>
 
-    <form method="POST" action="{{ route('clientes.update', $cliente) }}" class="space-y-6">
+    <form method="POST" action="{{ route('users.update', $cliente) }}" class="space-y-6">
         @csrf
         @method('PUT')
 
@@ -127,7 +127,7 @@
             <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                 Salvar alterações
             </button>
-            <a href="{{ route('clientes.show', $cliente) }}" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50">
+            <a href="{{ route('users.show', $cliente) }}" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50">
                 Cancelar
             </a>
         </div>

@@ -44,7 +44,7 @@ class ClienteController extends Controller
 
         $this->syncEndereco($cliente, $request);
 
-        return redirect()->route('clientes.show', $cliente)
+        return redirect()->route('users.show', $cliente)
             ->with('status', 'Cliente cadastrado com sucesso.');
     }
 
@@ -74,7 +74,7 @@ class ClienteController extends Controller
 
         $this->syncEndereco($cliente, $request);
 
-        return redirect()->route('clientes.show', $cliente)
+        return redirect()->route('users.show', $cliente)
             ->with('status', 'Cliente atualizado com sucesso.');
     }
 
@@ -87,7 +87,7 @@ class ClienteController extends Controller
             return response()->json(['ok' => true]);
         }
 
-        return redirect()->route('clientes.index')
+        return redirect()->route('users.index')
             ->with('status', 'Cliente excluído com sucesso.');
     }
 

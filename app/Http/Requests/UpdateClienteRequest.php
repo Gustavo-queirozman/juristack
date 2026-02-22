@@ -28,8 +28,9 @@ class UpdateClienteRequest extends FormRequest
     public function rules(): array
     {
         $userId = $this->user()->id;
-        $cliente = $this->route('cliente');
-        $clienteId = is_object($cliente) ? $cliente->id : $cliente;
+        // Rota é users/{user}; o parâmetro na rota é 'user' (binding resolve para model Cliente)
+        $cliente = $this->route('user');
+        $clienteId = $cliente instanceof Cliente ? $cliente->id : $cliente;
 
         $base = [
             'type' => ['required', 'string', Rule::in([Cliente::TYPE_PF, Cliente::TYPE_PJ])],
