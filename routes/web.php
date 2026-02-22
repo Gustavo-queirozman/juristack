@@ -18,7 +18,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/datajud/search', [DataJudController::class, 'apiSearch'])->name('datajud.api.search');
 
     // Usuários (CRUD) – rota /users
-    Route::resource('users', ClienteController::class)->parameters(['user' => 'cliente']);
+   // Route::resource('users', ClienteController::class)->parameters(['user' => 'cliente']);
 
     // Customers CRUD (cadastro completo + arquivos)
     Route::resource('customers', CustomerController::class);
