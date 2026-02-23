@@ -9,6 +9,7 @@ use App\Http\Controllers\DataJudController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\TaskController;
 
 // DataJud routes - require authentication
 Route::middleware('auth')->group(function () {
@@ -77,3 +78,12 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+
+
+Route::middleware('auth')->group(function () {
+    Route::resource('tasks', TaskController::class);
+    
+    Route::get('/tasks/{task}/users', [TaskController::class, 'users'])
+        ->name('tasks.users');
+});

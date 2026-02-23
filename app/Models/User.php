@@ -61,4 +61,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Cliente::class, 'user_id');
     }
+
+    public function tasks()
+{
+    return $this->belongsToMany(Task::class);
+}
 }

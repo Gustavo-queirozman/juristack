@@ -20,8 +20,14 @@ class DataJudService
 
     protected function endpointForTribunal(string $tribunal): string
     {
-        $tribunal = strtolower($tribunal);
-        return rtrim($this->baseUrl, '/') . "/api_publica_{$tribunal}/_search";
+        $endpoint = rtrim($this->baseUrl, '/') . "/api_publica_" . strtolower($tribunal) . "/_search";
+
+        Log::debug('DataJud endpoint resolvido', [
+            'tribunal' => $tribunal,
+            'endpoint' => $endpoint,
+        ]);
+
+        return $endpoint;
     }
 
     protected function headers(): array
@@ -32,13 +38,9 @@ class DataJudService
 
         if ($this->token) {
             $token = trim($this->token);
-            // If token already contains a scheme (APIKey, Bearer, etc), use as-is.
-            if (preg_match('/^(Bearer|APIKey)\s+/i', $token)) {
-                $headers['Authorization'] = $token;
-            } else {
-                // Default to APIKey scheme used by DataJud public API
-                $headers['Authorization'] = 'APIKey ' . $token;
-            }
+            $headers['Authorization'] = preg_match('/^(Bearer|APIKey)\s+/i', $token)
+                ? $token
+                : 'APIKey ' . $token;
         }
 
         return $headers;
@@ -47,71 +49,74 @@ class DataJudService
     public function normalizeProcessNumber(?string $numero): ?string
     {
         if (! $numero) return null;
-        // remove any non-digit or non-letter characters except dot and hyphen
-        return preg_replace('/[^0-9A-Za-z\.\-]/', '', $numero);
+
+        $normalized = preg_replace('/[^0-9A-Za-z\.\-]/', '', $numero);
+
+        Log::debug('DataJud normalizeProcessNumber', [
+            'original' => $numero,
+            'normalized' => $normalized,
+        ]);
+
+        return $normalized;
     }
 
-    /**
-     * Return a list of known tribunals to iterate when searching all.
-     * Keep this list in-sync with the view options.
-     */
-    public function tribunals(): array
-    {
-        return [
-            'STF','STJ','TST',
-            'TRF1','TRF2','TRF3','TRF4','TRF5','TRF6',
-            'TJAC','TJAL','TJAP','TJAM','TJBA','TJCE','TJDFT','TJES',
-            'TJGO','TJMA','TJMT','TJMS','TJMG','TJPB','TJPA','TJPR','TJPE',
-            'TJPI','TJRJ','TJRN','TJRS','TJRO','TJRR','TJSC','TJSP','TJSE','TJTO'
-        ];
-    }
-
-    /**
-     * Search across all known tribunals and merge results.
-     * This performs sequential requests and aggregates hits.
-     */
     public function searchAll(string $tipo, string $valor, int $from = 0, int $size = 20)
     {
+        Log::info('DataJud searchAll iniciado', compact('tipo', 'valor', 'from', 'size'));
+
+        $t0 = microtime(true);
         $allHits = [];
         $total = 0;
 
-        // Distribute size per tribunal to avoid huge responses per request.
         $tribunals = $this->tribunals();
         $perTribunal = max(1, (int) ceil($size / max(1, count($tribunals))));
 
         foreach ($tribunals as $tribunal) {
-            if ($tipo === 'numero') {
-                $resp = $this->searchByProcess($tribunal, $valor, 0, $perTribunal);
-            } else {
-                $resp = $this->searchByLawyer($tribunal, $valor, 0, $perTribunal);
+            Log::debug('DataJud searchAll consultando tribunal', [
+                'tribunal' => $tribunal,
+                'tipo' => $tipo,
+            ]);
+
+            $resp = $tipo === 'numero'
+                ? $this->searchByProcess($tribunal, $valor, 0, $perTribunal)
+                : $this->searchByLawyer($tribunal, $valor, 0, $perTribunal);
+
+            if (empty($resp)) {
+                Log::warning('DataJud resposta vazia', ['tribunal' => $tribunal]);
+                continue;
             }
 
-            if (empty($resp)) continue;
-
             $hits = $resp['hits']['hits'] ?? [];
-            $count = $resp['hits']['total'] ?? (is_array($resp['hits'] ?? null) ? count($hits) : ($resp['hits']['total']['value'] ?? count($hits)));
+            $count = $resp['hits']['total']['value'] ?? count($hits);
 
-            $total += is_numeric($count) ? (int)$count : count($hits);
+            Log::debug('DataJud hits por tribunal', [
+                'tribunal' => $tribunal,
+                'hits_count' => count($hits),
+                'total_reportado' => $count,
+            ]);
 
-            // annotate hit with tribunal for traceability
+            $total += (int) $count;
+
             foreach ($hits as $h) {
-                if (is_array($h) && !isset($h['_tribunal'])) {
-                    $h['_tribunal'] = $tribunal;
-                }
+                $h['_tribunal'] = $tribunal;
                 $allHits[] = $h;
             }
 
-            // stop early if we already have enough
             if (count($allHits) >= $size) break;
         }
 
-        // Trim to requested size
-        $allHits = array_slice($allHits, 0, $size);
+        $durationMs = (int) round((microtime(true) - $t0) * 1000);
+
+        Log::info('DataJud searchAll finalizado', [
+            'hits_retornados' => count($allHits),
+            'total' => $total,
+            'duration_ms' => $durationMs,
+        ]);
 
         return [
             'hits' => [
                 'total' => $total,
-                'hits' => $allHits,
+                'hits' => array_slice($allHits, 0, $size),
             ]
         ];
     }
@@ -130,24 +135,41 @@ class DataJudService
             ]
         ];
 
+        Log::info('DataJud searchByProcess', [
+            'tribunal' => $tribunal,
+            'numero' => $numero,
+            'from' => $from,
+            'size' => $size,
+        ]);
+
         if ($this->debug) {
-            Log::info('DataJud request (process)', ['endpoint' => $endpoint, 'body' => $body]);
+            Log::debug('DataJud request body (process)', $body);
         }
 
         try {
             $resp = Http::withHeaders($this->headers())->post($endpoint, $body);
-        } catch (\Exception $e) {
-            Log::error('DataJud request failed: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('DataJud HTTP exception (process)', [
+                'tribunal' => $tribunal,
+                'error' => $e->getMessage(),
+            ]);
             return null;
         }
 
         if ($resp->failed()) {
-            Log::warning('DataJud returned failed status', ['status' => $resp->status(), 'body' => $resp->body()]);
+            Log::warning('DataJud HTTP failed (process)', [
+                'tribunal' => $tribunal,
+                'status' => $resp->status(),
+                'body' => $resp->body(),
+            ]);
             return null;
         }
 
         if ($this->debug) {
-            Log::info('DataJud response (process)', ['status' => $resp->status(), 'body' => $resp->body()]);
+            Log::debug('DataJud response (process)', [
+                'status' => $resp->status(),
+                'hits' => $resp->json('hits.total'),
+            ]);
         }
 
         return $resp->json();
@@ -157,7 +179,8 @@ class DataJudService
     {
         $endpoint = $this->endpointForTribunal($tribunal);
 
-        // Combine a phrase_prefix clause (no fuzziness) with a best_fields fuzzy clause
+        Log::info('DataJud searchByLawyer', compact('tribunal', 'nome', 'from', 'size'));
+
         $fields = [
             'partes.advogados.nome^3',
             'partes.advogados.nomeCompleto',
@@ -171,60 +194,53 @@ class DataJudService
             'query' => [
                 'bool' => [
                     'should' => [
-                        [
-                            'multi_match' => [
-                                'query' => $nome,
-                                'type' => 'phrase_prefix',
-                                'operator' => 'and',
-                                'fields' => $fields,
-                            ]
-                        ],
-                        [
-                            'multi_match' => [
-                                'query' => $nome,
-                                'type' => 'best_fields',
-                                'fuzziness' => 'AUTO',
-                                'operator' => 'and',
-                                'fields' => $fields,
-                            ]
-                        ]
+                        ['multi_match' => [
+                            'query' => $nome,
+                            'type' => 'phrase_prefix',
+                            'operator' => 'and',
+                            'fields' => $fields,
+                        ]],
+                        ['multi_match' => [
+                            'query' => $nome,
+                            'type' => 'best_fields',
+                            'fuzziness' => 'AUTO',
+                            'operator' => 'and',
+                            'fields' => $fields,
+                        ]]
                     ]
                 ]
             ]
         ];
 
+        if ($this->debug) {
+            Log::debug('DataJud request body (lawyer)', $body);
+        }
+
         try {
             $resp = Http::withHeaders($this->headers())->post($endpoint, $body);
-        } catch (\Exception $e) {
-            Log::error('DataJud request failed: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('DataJud HTTP exception (lawyer)', [
+                'tribunal' => $tribunal,
+                'error' => $e->getMessage(),
+            ]);
             return null;
         }
 
         if ($resp->failed()) {
-            Log::warning('DataJud returned failed status', ['status' => $resp->status(), 'body' => $resp->body()]);
+            Log::warning('DataJud HTTP failed (lawyer)', [
+                'tribunal' => $tribunal,
+                'status' => $resp->status(),
+            ]);
             return null;
         }
 
         if ($this->debug) {
-            Log::info('DataJud response (lawyer)', ['status' => $resp->status(), 'body' => $resp->body()]);
+            Log::debug('DataJud response (lawyer)', [
+                'status' => $resp->status(),
+                'hits' => $resp->json('hits.total'),
+            ]);
         }
 
         return $resp->json();
-    }
-
-    /**
-     * Debug helper to run a search and return raw response (used by debug endpoint).
-     */
-    public function debugSearch(string $tribunal, string $tipo, string $valor, int $from = 0, int $size = 10)
-    {
-        if ($tribunal === 'ALL') {
-            return $this->searchAll($tipo, $valor, $from, $size);
-        }
-
-        if ($tipo === 'numero') {
-            return $this->searchByProcess($tribunal, $valor, $from, $size);
-        }
-
-        return $this->searchByLawyer($tribunal, $valor, $from, $size);
     }
 }
