@@ -55,13 +55,15 @@
         $tasksByStatus = $tasks->groupBy('status');
     @endphp
 
-    <div id="kanban-board"
-        class="rounded-xl border border-gray-200 bg-slate-50/80 p-3 md:p-4 grid grid-cols-1 md:grid-cols-3 gap-4"
-        data-update-url-template="{{ route('tasks.update-status', ['task' => '__TASK_ID__']) }}"
-        data-assign-url-template="{{ route('tasks.update-assignee', ['task' => '__TASK_ID__']) }}"
-        data-delete-url-template="{{ route('tasks.destroy', ['task' => '__TASK_ID__']) }}">
-        @foreach($statuses as $statusKey => $statusConfig)
-        <div class="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm min-h-[340px]">
+    <div class="rounded-xl border border-gray-200 bg-slate-50/80">
+        <div class="max-h-[60vh] md:max-h-[calc(100vh-260px)] overflow-auto p-3 md:p-4">
+            <div id="kanban-board"
+                class="grid grid-cols-1 md:grid-cols-3 gap-4"
+                data-update-url-template="{{ route('tasks.update-status', ['task' => '__TASK_ID__']) }}"
+                data-assign-url-template="{{ route('tasks.update-assignee', ['task' => '__TASK_ID__']) }}"
+                data-delete-url-template="{{ route('tasks.destroy', ['task' => '__TASK_ID__']) }}">
+                @foreach($statuses as $statusKey => $statusConfig)
+                <div class="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm min-h-[340px]">
             <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50/80">
                 <div class="flex items-center gap-2">
                     <span class="h-2 w-2 rounded-full {{ $statusConfig['dot'] }}"></span>
@@ -142,6 +144,8 @@
             </div>
         </div>
         @endforeach
+            </div>
+        </div>
     </div>
 
     {{-- Modal: criar tarefa --}}

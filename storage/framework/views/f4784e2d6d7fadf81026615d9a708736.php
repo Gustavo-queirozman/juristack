@@ -54,13 +54,15 @@
         $tasksByStatus = $tasks->groupBy('status');
     ?>
 
-    <div id="kanban-board"
-        class="rounded-xl border border-gray-200 bg-slate-50/80 p-3 md:p-4 grid grid-cols-1 md:grid-cols-3 gap-4"
-        data-update-url-template="<?php echo e(route('tasks.update-status', ['task' => '__TASK_ID__'])); ?>"
-        data-assign-url-template="<?php echo e(route('tasks.update-assignee', ['task' => '__TASK_ID__'])); ?>"
-        data-delete-url-template="<?php echo e(route('tasks.destroy', ['task' => '__TASK_ID__'])); ?>">
-        <?php $__currentLoopData = $statuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $statusKey => $statusConfig): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-        <div class="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm min-h-[340px]">
+    <div class="rounded-xl border border-gray-200 bg-slate-50/80">
+        <div class="max-h-[60vh] md:max-h-[calc(100vh-260px)] overflow-auto p-3 md:p-4">
+            <div id="kanban-board"
+                class="grid grid-cols-1 md:grid-cols-3 gap-4"
+                data-update-url-template="<?php echo e(route('tasks.update-status', ['task' => '__TASK_ID__'])); ?>"
+                data-assign-url-template="<?php echo e(route('tasks.update-assignee', ['task' => '__TASK_ID__'])); ?>"
+                data-delete-url-template="<?php echo e(route('tasks.destroy', ['task' => '__TASK_ID__'])); ?>">
+                <?php $__currentLoopData = $statuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $statusKey => $statusConfig): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <div class="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm min-h-[340px]">
             <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50/80">
                 <div class="flex items-center gap-2">
                     <span class="h-2 w-2 rounded-full <?php echo e($statusConfig['dot']); ?>"></span>
@@ -148,6 +150,8 @@
             </div>
         </div>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </div>
+        </div>
     </div>
 
     
