@@ -81,9 +81,26 @@ require __DIR__.'/auth.php';
 
 
 
-Route::middleware('auth')->group(function () {
-    Route::resource('tasks', TaskController::class);
-    
-    Route::get('/tasks/{task}/users', [TaskController::class, 'users'])
-        ->name('tasks.users');
+Route::middleware('auth')->prefix('tarefas')->name('tasks.')->group(function () {
+    // Kanban de tarefas – /tarefas/kanban
+    Route::get('/kanban', [TaskController::class, 'index'])->name('index');
+
+    // Criar tarefa a partir do kanban
+    Route::post('/', [TaskController::class, 'store'])->name('store');
+
+    // Atualizar status via drag-and-drop
+    Route::patch('/{task}/status', [TaskController::class, 'updateStatus'])
+        ->name('update-status');
+
+    // Atualizar responsável pela tarefa
+    Route::patch('/{task}/assignee', [TaskController::class, 'updateAssignee'])
+        ->name('update-assignee');
+
+    // Listar usuários vinculados à tarefa (se precisar em outra tela)
+    Route::get('/{task}/users', [TaskController::class, 'users'])
+        ->name('users');
+
+    // Excluir tarefa
+    Route::delete('/{task}', [TaskController::class, 'destroy'])
+        ->name('destroy');
 });

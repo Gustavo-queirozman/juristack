@@ -8,16 +8,14 @@ use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
 
-    // LISTAR TODAS
+    // LISTAR TODAS (Kanban)
     public function index()
     {
         $tasks = Task::with('users')->latest()->get();
-        return view('tasks.index', compact('tasks'));
+        $users = User::orderBy('name')->get();
+
+        return view('tasks.index', compact('tasks', 'users'));
     }
 
     // FORMULÁRIO DE CRIAÇÃO
@@ -43,9 +41,13 @@ class TaskController extends Controller
             'status' => $request->status,
         ]);
 
-        // associar usuários (many-to-many)
-        if ($request->users) {
-            $task->users()->sync($request->users);
+        // associar usuários (many-to-many), ignorando valores vazios
+        $userIds = collect($request->input('users', []))
+            ->filter(fn ($id) => filled($id))
+            ->all();
+
+        if (!empty($userIds)) {
+            $task->users()->sync($userIds);
         }
 
         return redirect()->route('tasks.index')
@@ -79,8 +81,14 @@ class TaskController extends Controller
 
         $task->update($request->only(['title', 'description', 'status']));
 
-        if ($request->users) {
-            $task->users()->sync($request->users);
+        $userIds = collect($request->input('users', []))
+            ->filter(fn ($id) => filled($id))
+            ->all();
+
+        if (!empty($userIds)) {
+            $task->users()->sync($userIds);
+        } else {
+            $task->users()->detach();
         }
 
         return redirect()->route('tasks.index')
@@ -94,6 +102,46 @@ class TaskController extends Controller
 
         return redirect()->route('tasks.index')
                          ->with('success', 'Tarefa removida com sucesso!');
+    }
+
+    public function updateStatus(Request $request, Task $task)
+    {
+        $request->validate([
+            'status' => 'required|in:pending,in_progress,completed',
+        ]);
+
+        $task->update([
+            'status' => $request->status,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'task' => $task->fresh('users'),
+            ]);
+        }
+
+        return back()->with('success', 'Status da tarefa atualizado com sucesso!');
+    }
+
+    public function updateAssignee(Request $request, Task $task)
+    {
+        $data = $request->validate([
+            'user_id' => 'nullable|exists:users,id',
+        ]);
+
+        $userId = $data['user_id'] ?? null;
+
+        $task->users()->sync($userId ? [$userId] : []);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'task' => $task->fresh('users'),
+            ]);
+        }
+
+        return back()->with('success', 'Responsável da tarefa atualizado com sucesso!');
     }
 
     // LISTAR USUÁRIOS DA TAREFA
