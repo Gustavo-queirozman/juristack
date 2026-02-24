@@ -21,9 +21,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/datajud/salvo/{id}', [DataJudController::class, 'deleteSaved'])->name('datajud.salvo.delete');
     Route::post('/datajud/search', [DataJudController::class, 'apiSearch'])->name('datajud.api.search');
 
-    // Usuários (CRUD) – rota /users
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::post('/user', [UserController::class, 'store'])->name('users.create');
+    // Clientes (CRUD) – mantido em /users por compatibilidade das views
+    Route::resource('users', UserController::class)
+        ->parameters(['users' => 'cliente']);
 
     // Customers CRUD (cadastro completo + arquivos)
     Route::resource('customers', CustomerController::class);
