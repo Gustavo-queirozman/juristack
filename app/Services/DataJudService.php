@@ -60,6 +60,21 @@ class DataJudService
         return $normalized;
     }
 
+    /**
+     * Lista de tribunais suportados para buscas em "Todos os tribunais (ALL)".
+     * Deve ficar em sincronia com as opções exibidas em `resources/views/datajud/pesquisa.blade.php`.
+     */
+    public function tribunals(): array
+    {
+        return [
+            'STF','STJ','TST',
+            'TRF1','TRF2','TRF3','TRF4','TRF5','TRF6',
+            'TJAC','TJAL','TJAP','TJAM','TJBA','TJCE','TJDFT','TJES',
+            'TJGO','TJMA','TJMT','TJMS','TJMG','TJPB','TJPA','TJPR','TJPE',
+            'TJPI','TJRJ','TJRN','TJRS','TJRO','TJRR','TJSC','TJSP','TJSE','TJTO',
+        ];
+    }
+
     public function searchAll(string $tipo, string $valor, int $from = 0, int $size = 20)
     {
         Log::info('DataJud searchAll iniciado', compact('tipo', 'valor', 'from', 'size'));
@@ -125,13 +140,25 @@ class DataJudService
     {
         $endpoint = $this->endpointForTribunal($tribunal);
 
+        $norm = $this->normalizeProcessNumber($numero);
+        $digits = preg_replace('/\D+/', '', (string) $numero);
+
         $body = [
             'from' => $from,
             'size' => $size,
             'query' => [
-                'term' => [
-                    'numeroProcesso' => $this->normalizeProcessNumber($numero)
-                ]
+                // DataJud/Elastic pode mapear `numeroProcesso` como text/keyword dependendo do tribunal.
+                // Usamos uma estratégia "should" para cobrir ambos e evitar falso "nenhum resultado".
+                'bool' => [
+                    'should' => array_values(array_filter([
+                        $norm ? ['term' => ['numeroProcesso.keyword' => $norm]] : null,
+                        $norm ? ['term' => ['numeroProcesso' => $norm]] : null,
+                        $norm ? ['match_phrase' => ['numeroProcesso' => $norm]] : null,
+                        $norm ? ['match' => ['numeroProcesso' => ['query' => $norm, 'operator' => 'and']]] : null,
+                        $digits ? ['match' => ['numeroProcesso' => ['query' => $digits, 'operator' => 'and']]] : null,
+                    ])),
+                    'minimum_should_match' => 1,
+                ],
             ]
         ];
 
