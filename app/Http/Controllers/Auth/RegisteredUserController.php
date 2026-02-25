@@ -41,6 +41,12 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+	match ($user->role) {
+  		'ADVOCATE' => Advocate::create(['user_id' => $user->id, 'oab_number' => $data['oab_number']]),
+  		'ENTERPRISE' => Enterprise::create(['user_id' => $user->id, 'cnpj' => $data['cnpj'], 'company_name' => $data['company_name']]),
+  		'CUSTOMER' => Customer::create(['user_id' => $user->id, 'full_name' => $data['full_name']]),
+	};	
+
         event(new Registered($user));
 
         Auth::login($user);

@@ -6,7 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-
+use Illuminate\Support\Str;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -54,11 +54,30 @@ class User extends Authenticatable
         return $this->hasMany(ProcessoMonitor::class, 'user_id');
     }
 
-    /**
-     * Clientes vinculados ao usuário
-     */
-    public function clientes()
-    {
-        return $this->hasMany(Cliente::class, 'user_id');
-    }
+
+public function advocate()
+{
+    return $this->hasOne(Advocate::class);
+}
+
+public function enterprise()
+{
+    return $this->hasOne(Enterprise::class);
+}
+
+public function customer()
+{
+    return $this->hasOne(Customer::class);
+}
+
+protected static function boot()
+{
+    parent::boot();
+
+    static::creating(function ($model) {
+        if (!$model->id) {
+            $model->id = (string) Str::uuid();
+        }
+    });
+}
 }
