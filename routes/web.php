@@ -10,9 +10,16 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\EventController;
 
 // DataJud routes - require authentication
 Route::middleware('auth')->group(function () {
+    // Agenda (UI) + Eventos (API JSON)
+    Route::get('/agenda', fn () => view('events.agenda'))->name('agenda.index');
+    Route::resource('events', EventController::class)->only([
+        'index', 'store', 'show', 'update', 'destroy',
+    ]);
+
     Route::get('/datajud/pesquisa', fn () => view('datajud.pesquisa'))->name('datajud.index');
     Route::get('/datajud/salvos', [DataJudController::class, 'salvos'])->name('datajud.salvos');
     Route::post('/datajud/salvar', [DataJudController::class, 'salvarProcesso'])->name('datajud.salvar');
@@ -57,8 +64,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/document-templates/{id}', [DocumentTemplateController::class, 'update']);
     Route::delete('/document-templates/{id}', [DocumentTemplateController::class, 'destroy'])->name('document-templates.destroy');
 });
-
-Route::resource('events', EventController::class);
 
 Route::middleware('auth:customer')->group(function () {
     Route::post('/customers/upload', [CustomerController::class, 'uploadFiles'])
