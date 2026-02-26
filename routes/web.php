@@ -58,6 +58,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/document-templates/{id}', [DocumentTemplateController::class, 'destroy'])->name('document-templates.destroy');
 });
 
+Route::resource('events', EventController::class);
+
 Route::middleware('auth:customer')->group(function () {
     Route::post('/customers/upload', [CustomerController::class, 'uploadFiles'])
         ->name('customers.upload');
