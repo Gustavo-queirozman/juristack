@@ -59,4 +59,16 @@ protected $casts = [
     'mother_birth_date' => 'date',
 ];
 
+    public static function formatarCpf(string $cpf): string
+    {
+        $digits = preg_replace('/\D/', '', $cpf);
+        return preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $digits);
+    }
+
+    public static function formatarCnpj(string $cnpj): string
+    {
+        $digits = preg_replace('/\D/', '', $cnpj);
+        return preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $digits);
+    }
+
 }

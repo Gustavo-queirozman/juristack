@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Cliente;
 use App\Models\Customer;
 use App\Models\CustomerFile;
 use App\Models\ProcessoMonitor;
@@ -15,7 +14,6 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        $totalUsuarios = Cliente::where('user_id', $user->id)->count();
         $totalClientes = Customer::count();
         $totalProcessos = ProcessoMonitor::where('user_id', $user->id)->count();
         $totalArquivos = CustomerFile::count();
@@ -30,7 +28,6 @@ class DashboardController extends Controller
             ->get(['id', 'name', 'email', 'created_at']);
 
         return view('dashboard', compact(
-            'totalUsuarios',
             'totalClientes',
             'totalProcessos',
             'totalArquivos',

@@ -37,7 +37,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="cnp" class="block text-sm font-medium text-gray-700 mb-1">CPF/CNP</label>
-                        <input type="text" name="cnp" id="cnp" value="{{ old('cnp', $customer->cnp ? (strlen(preg_replace('/\D/','',$customer->cnp)) === 11 ? \App\Models\Cliente::formatarCpf($customer->cnp) : \App\Models\Cliente::formatarCnpj($customer->cnp)) : '') }}" maxlength="20"
+                        <input type="text" name="cnp" id="cnp" value="{{ old('cnp', $customer->cnp ? (strlen(preg_replace('/\D/','',$customer->cnp)) === 11 ? \App\Models\Customer::formatarCpf($customer->cnp) : \App\Models\Customer::formatarCnpj($customer->cnp)) : '') }}" maxlength="20"
                                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm @error('cnp') border-red-500 @enderror">
                         @error('cnp')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>

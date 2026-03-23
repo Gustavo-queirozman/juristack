@@ -12,26 +12,13 @@
     </p>
 
     {{-- Cards de métricas --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <a href="{{ route('users.index') }}" class="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200">
-            <div class="flex items-start justify-between">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-500 truncate">Usuários</p>
-                    <p class="mt-1 text-2xl font-semibold text-gray-900">{{ number_format($totalUsuarios) }}</p>
-                    <p class="mt-0.5 text-xs text-gray-400">vinculados à sua conta</p>
-                </div>
-                <div class="ml-3 flex-shrink-0 rounded-lg bg-indigo-50 p-2.5 group-hover:bg-indigo-100 transition-colors">
-                    <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                </div>
-            </div>
-        </a>
-
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <a href="{{ route('customers.index') }}" class="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200">
             <div class="flex items-start justify-between">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-500 truncate">Clientes</p>
+                    <p class="text-sm font-medium text-gray-500 truncate">Clientes cadastrados</p>
                     <p class="mt-1 text-2xl font-semibold text-gray-900">{{ number_format($totalClientes) }}</p>
-                    <p class="mt-0.5 text-xs text-gray-400">cadastro completo</p>
+                    <p class="mt-0.5 text-xs text-gray-400">no sistema</p>
                 </div>
                 <div class="ml-3 flex-shrink-0 rounded-lg bg-violet-50 p-2.5 group-hover:bg-violet-100 transition-colors">
                     <svg class="h-6 w-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -72,10 +59,6 @@
             <h3 class="text-sm font-semibold text-gray-900">Acesso rápido</h3>
         </div>
         <div class="p-4 flex flex-wrap gap-3">
-            <a href="{{ route('users.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-                Novo usuário
-            </a>
             <a href="{{ route('customers.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5H4a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 Novo cliente

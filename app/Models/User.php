@@ -57,10 +57,7 @@ class User extends Authenticatable
     /**
      * Clientes vinculados ao usuário
      */
-    public function clientes()
-    {
-        return $this->hasMany(Cliente::class, 'user_id');
-    }
+    // Removido: relacionamento com o model legado `Cliente`.
 
     public function tasks()
 {
