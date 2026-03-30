@@ -1,5 +1,8 @@
 # Demo
 www.juristack.tiflatcorporation.com
+### Dados para acesso
+usuário: gustavo@gmail.com
+senha: 12345678
 
 # Tecnologias
 
