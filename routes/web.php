@@ -1,18 +1,18 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataJudController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\TaskController;
+use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\FinancialEntryController;
+use App\Http\Controllers\OfficeAccessController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TaskController;
+use Illuminate\Support\Facades\Route;
 
-// DataJud routes - require authentication
-Route::middleware('auth')->group(function () {
-    // Agenda (UI) + Eventos (API JSON)
+Route::middleware(['auth', 'role:admin,enterprise_admin,lawyer'])->group(function () {
     Route::get('/agenda', fn () => view('events.agenda'))->name('agenda.index');
     Route::resource('events', EventController::class)->only([
         'index', 'store', 'show', 'update', 'destroy',
@@ -26,13 +26,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/datajud/salvo/{id}', [DataJudController::class, 'deleteSaved'])->name('datajud.salvo.delete');
     Route::post('/datajud/search', [DataJudController::class, 'apiSearch'])->name('datajud.api.search');
 
-    // Customers CRUD (cadastro completo + arquivos)
     Route::resource('customers', CustomerController::class);
     Route::post('customers/{customer}/files', [CustomerController::class, 'uploadForCustomer'])->name('customers.files.store');
     Route::get('customers/{customer}/files/{file}/download', [CustomerController::class, 'downloadFile'])->name('customers.files.download');
     Route::delete('customers/{customer}/files/{file}', [CustomerController::class, 'destroyFile'])->name('customers.files.destroy');
 
-    // Documentos e modelos (requer auth)
     Route::get('/documents', [DocumentController::class, 'listDocuments'])->name('documents.index');
     Route::get('/documents/create', [DocumentController::class, 'createFromTemplate'])->name('documents.create');
     Route::post('/documents', [DocumentController::class, 'createDocument'])->name('documents.store');
@@ -57,11 +55,43 @@ Route::middleware('auth')->group(function () {
     Route::put('/document-templates/{id}', [DocumentTemplateController::class, 'update'])->name('document-templates.update');
     Route::patch('/document-templates/{id}', [DocumentTemplateController::class, 'update']);
     Route::delete('/document-templates/{id}', [DocumentTemplateController::class, 'destroy'])->name('document-templates.destroy');
+
+    Route::middleware('auth')->prefix('tarefas')->name('tasks.')->group(function () {
+        Route::get('/kanban', [TaskController::class, 'index'])->name('index');
+        Route::post('/', [TaskController::class, 'store'])->name('store');
+        Route::patch('/{task}', [TaskController::class, 'update'])->name('update');
+        Route::patch('/{task}/status', [TaskController::class, 'updateStatus'])->name('update-status');
+        Route::patch('/{task}/assignee', [TaskController::class, 'updateAssignee'])->name('update-assignee');
+        Route::get('/{task}/users', [TaskController::class, 'users'])->name('users');
+        Route::delete('/{task}', [TaskController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('financeiro')->name('financial-entries.')->group(function () {
+        Route::get('/', [FinancialEntryController::class, 'index'])->name('index');
+        Route::get('/create', [FinancialEntryController::class, 'create'])->name('create');
+        Route::post('/', [FinancialEntryController::class, 'store'])->name('store');
+        Route::get('/{financialEntry}/edit', [FinancialEntryController::class, 'edit'])->name('edit');
+        Route::put('/{financialEntry}', [FinancialEntryController::class, 'update'])->name('update');
+        Route::delete('/{financialEntry}', [FinancialEntryController::class, 'destroy'])->name('destroy');
+    });
 });
 
-Route::middleware('auth:customer')->group(function () {
+Route::middleware(['auth', 'role:admin,enterprise_admin'])->prefix('acessos-escritorio')->name('office-access.')->group(function () {
+    Route::get('/', [OfficeAccessController::class, 'index'])->name('index');
+    Route::get('/create', [OfficeAccessController::class, 'create'])->name('create');
+    Route::post('/', [OfficeAccessController::class, 'store'])->name('store');
+    Route::get('/{user}/edit', [OfficeAccessController::class, 'edit'])->name('edit');
+    Route::put('/{user}', [OfficeAccessController::class, 'update'])->name('update');
+    Route::delete('/{user}', [OfficeAccessController::class, 'destroy'])->name('destroy');
+});
+
+Route::middleware(['auth', 'role:client'])->group(function () {
     Route::post('/customers/upload', [CustomerController::class, 'uploadFiles'])
         ->name('customers.upload');
+    Route::get('/portal/arquivos/{file}/download', [CustomerController::class, 'downloadOwnFile'])
+        ->name('client.files.download');
+    Route::get('/portal/documentos/{id}/download', [DocumentController::class, 'downloadOwn'])
+        ->name('client.documents.download');
 });
 
 Route::get('/', function () {
@@ -78,30 +108,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
-
-
-
-Route::middleware('auth')->prefix('tarefas')->name('tasks.')->group(function () {
-    // Kanban de tarefas – /tarefas/kanban
-    Route::get('/kanban', [TaskController::class, 'index'])->name('index');
-
-    // Criar tarefa a partir do kanban
-    Route::post('/', [TaskController::class, 'store'])->name('store');
-
-    // Atualizar status via drag-and-drop
-    Route::patch('/{task}/status', [TaskController::class, 'updateStatus'])
-        ->name('update-status');
-
-    // Atualizar responsável pela tarefa
-    Route::patch('/{task}/assignee', [TaskController::class, 'updateAssignee'])
-        ->name('update-assignee');
-
-    // Listar usuários vinculados à tarefa (se precisar em outra tela)
-    Route::get('/{task}/users', [TaskController::class, 'users'])
-        ->name('users');
-
-    // Excluir tarefa
-    Route::delete('/{task}', [TaskController::class, 'destroy'])
-        ->name('destroy');
-});
+require __DIR__ . '/auth.php';

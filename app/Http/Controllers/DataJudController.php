@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Services\DataJudService;
-use App\Services\DatajudPersistService;
+use App\Models\Customer;
 use App\Models\DatajudProcesso;
 use App\Models\ProcessoMonitor;
+use App\Models\User;
+use App\Services\DataJudService;
+use App\Services\DatajudPersistService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class DataJudController extends Controller
 {
-    protected $service;
+    protected DataJudService $service;
 
     public function __construct(DataJudService $service)
     {
@@ -19,13 +23,25 @@ class DataJudController extends Controller
 
     public function salvos(Request $request)
     {
-        $query = DatajudProcesso::with('assuntos')
+        $query = DatajudProcesso::with(['assuntos', 'movimentos', 'customer'])
             ->where('user_id', auth()->id());
 
         $busca = $request->get('busca');
         if ($busca !== null && $busca !== '') {
-            $term = '%' . trim(preg_replace('/\s+/', '%', $busca)) . '%';
-            $query->where('numero_processo', 'like', $term);
+            $buscaNormalizada = trim((string) $busca);
+            $term = '%' . preg_replace('/\s+/', '%', $buscaNormalizada) . '%';
+            $documento = $this->normalizeDocument($buscaNormalizada);
+
+            $query->where(function (Builder $subQuery) use ($term, $documento) {
+                $subQuery->where('numero_processo', 'like', $term)
+                    ->orWhereHas('customer', function (Builder $customerQuery) use ($term, $documento) {
+                        $customerQuery->where('name', 'like', $term);
+
+                        if ($documento !== '') {
+                            $customerQuery->orWhere('cnp', 'like', '%' . $documento . '%');
+                        }
+                    });
+            });
         }
 
         $processos = $query->latest()->paginate(20)->withQueryString();
@@ -69,7 +85,7 @@ class DataJudController extends Controller
         }
 
         return view('datajud.resultado', [
-            'resultados' => $resp['hits']['hits'] ?? []
+            'resultados' => $resp['hits']['hits'] ?? [],
         ]);
     }
 
@@ -110,71 +126,103 @@ class DataJudController extends Controller
         return response()->json($resp);
     }
 
+    public function salvarProcesso(Request $request, DatajudPersistService $persist)
+    {
+        $request->validate([
+            'tribunal' => 'required|string',
+            'source' => 'required',
+            'cpf_cliente' => 'required|string',
+        ]);
 
+        $source = $request->input('source');
+        if (is_string($source)) {
+            $decoded = json_decode($source, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $source = $decoded;
+            }
+        }
 
-public function salvarProcesso(Request $request, DatajudPersistService $persist)
-{
-    $request->validate([
-        'tribunal' => 'required|string',
-        'source' => 'required', // aceita array (AJAX) ou JSON string (form)
-    ]);
+        if (! is_array($source)) {
+            return response()->json(['error' => 'Campo source invalido.'], 422);
+        }
 
-    // garantir que temos um array em $source
-    $source = $request->input('source');
-    if (is_string($source)) {
-        $decoded = json_decode($source, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
-            $source = $decoded;
+        if (empty($source['numeroProcesso']) && ! empty($source['numero_processo'])) {
+            $source['numeroProcesso'] = $source['numero_processo'];
+        }
+
+        if (empty($source['numeroProcesso'])) {
+            return response()->json(['error' => 'Dados do processo incompletos: numero nao encontrado.'], 422);
+        }
+
+        $customerDocument = $this->normalizeDocument(
+            $request->input('cpf_cliente')
+                ?? $request->input('cpf')
+                ?? $request->input('cnp')
+                ?? data_get($source, 'cpf')
+                ?? data_get($source, 'cnp')
+        );
+
+        if ($customerDocument === '') {
+            return response()->json(['error' => 'Informe o CPF do cliente para vincular o processo.'], 422);
+        }
+
+        $customer = $this->scopedCustomersQuery($request->user())
+            ->where('cnp', $customerDocument)
+            ->first();
+
+        if (! $customer) {
+            return response()->json(['error' => 'Cliente nao encontrado para o CPF informado.'], 422);
+        }
+
+        $source['customer_id'] = $customer->id;
+
+        try {
+            $processo = $persist->salvarProcesso(
+                $source,
+                $request->tribunal,
+                auth()->id()
+            );
+
+            $processoUpdates = [];
+            if (Schema::hasColumn('datajud_processos', 'customer_id')) {
+                $processoUpdates['customer_id'] = $customer->id;
+            }
+            if (Schema::hasColumn('datajud_processos', 'cliente_id')) {
+                $processoUpdates['cliente_id'] = $customer->id;
+            }
+            if ($processoUpdates !== []) {
+                $processo->forceFill($processoUpdates)->save();
+            }
+
+            ProcessoMonitor::updateOrCreate(
+                [
+                    'user_id' => auth()->id(),
+                    'processo_id' => $processo->id,
+                ],
+                [
+                    'tribunal' => $request->tribunal,
+                    'numero_processo' => $source['numeroProcesso'] ?? null,
+                    'ultima_atualizacao_datajud' => $source['dataHoraUltimaAtualizacao'] ?? now(),
+                    'ativo' => true,
+                ]
+            );
+
+            return response()->json([
+                'ok' => true,
+                'customer' => [
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'cnp' => $customer->cnp,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    if (!is_array($source)) {
-        return response()->json(['error' => 'Campo source inválido'], 422);
-    }
-
-    // Garantir numeroProcesso (API pode retornar camelCase ou snake_case)
-    if (empty($source['numeroProcesso']) && !empty($source['numero_processo'])) {
-        $source['numeroProcesso'] = $source['numero_processo'];
-    }
-
-    if (empty($source['numeroProcesso'])) {
-        return response()->json(['error' => 'Dados do processo incompletos (número não encontrado).'], 422);
-    }
-
-    try {
-        // Salvar o processo
-        $processo = $persist->salvarProcesso(
-            $source,
-            $request->tribunal,
-            auth()->id()
-        );
-
-        // Criar monitor para este processo
-        ProcessoMonitor::updateOrCreate(
-            [
-                'user_id' => auth()->id(),
-                'processo_id' => $processo->id,
-            ],
-            [
-                'tribunal' => $request->tribunal,
-                'numero_processo' => $source['numeroProcesso'] ?? null,
-                'ultima_atualizacao_datajud' => $source['dataHoraUltimaAtualizacao'] ?? now(),
-                'ativo' => true,
-            ]
-        );
-
-        return response()->json(['ok' => true]);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
-}
-
-    /**
-     * Mostrar detalhe de um processo salvo
-     */
     public function showSaved($id)
     {
-        $processo = DatajudProcesso::with(['assuntos', 'movimentos.complementos'])
+        $processo = DatajudProcesso::with(['assuntos', 'movimentos.complementos', 'customer'])
             ->where('id', $id)
             ->where('user_id', auth()->id())
             ->firstOrFail();
@@ -182,9 +230,6 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
         return view('datajud.salvo', compact('processo'));
     }
 
-    /**
-     * Atualizar processo salvo: reconsulta no DataJud e persiste alterações.
-     */
     public function atualizarProcesso(Request $request, $id, DatajudPersistService $persist)
     {
         $processo = DatajudProcesso::where('id', $id)
@@ -199,7 +244,7 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
             : $this->service->searchByProcess($tribunal, $numero, 0, 1);
 
         if (empty($resp) || empty($resp['hits']['hits'])) {
-            return response()->json(['error' => 'Processo não encontrado no DataJud no momento.'], 404);
+            return response()->json(['error' => 'Processo nao encontrado no DataJud no momento.'], 404);
         }
 
         $hits = $resp['hits']['hits'];
@@ -218,7 +263,7 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
 
         $source = $hit['_source'] ?? [];
         if (empty($source)) {
-            return response()->json(['error' => 'Dados do processo indisponíveis.'], 502);
+            return response()->json(['error' => 'Dados do processo indisponiveis.'], 502);
         }
 
         if (empty($source['numeroProcesso']) && ! empty($source['numero_processo'])) {
@@ -247,9 +292,6 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
         }
     }
 
-    /**
-     * Remover processo salvo (apenas proprietário)
-     */
     public function deleteSaved(Request $request, $id)
     {
         $processo = DatajudProcesso::with('movimentos.complementos', 'assuntos')
@@ -257,19 +299,14 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
-        // remover monitor associado
         ProcessoMonitor::where('processo_id', $processo->id)->delete();
 
-        // remover movimentos e complementos
         foreach ($processo->movimentos as $mov) {
             $mov->complementos()->delete();
             $mov->delete();
         }
 
-        // remover assuntos
         $processo->assuntos()->delete();
-
-        // remover o processo
         $processo->delete();
 
         if ($request->wantsJson()) {
@@ -279,4 +316,19 @@ public function salvarProcesso(Request $request, DatajudPersistService $persist)
         return redirect()->route('datajud.salvos')->with('status', 'Processo removido com sucesso.');
     }
 
+    private function scopedCustomersQuery(User $user): Builder
+    {
+        $query = Customer::query();
+
+        if (! $user->isAdmin()) {
+            $query->where('enterprise_id', $user->enterprise_id);
+        }
+
+        return $query;
+    }
+
+    private function normalizeDocument(?string $document): string
+    {
+        return preg_replace('/\D/', '', (string) $document);
+    }
 }

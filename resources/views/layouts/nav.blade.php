@@ -1,4 +1,6 @@
 @php
+    $user = auth()->user();
+    $isClientUser = $user?->role === \App\Models\User::ROLE_CLIENT;
     $isHome = request()->path() === '';
     $isDashboard = request()->routeIs('dashboard');
     $isPesquisa = request()->routeIs('datajud.index');
@@ -6,8 +8,11 @@
     $isDocuments = request()->routeIs('documents.*') || request()->routeIs('document-templates.*');
     $isTasks = request()->routeIs('tasks.*');
     $isAgenda = request()->routeIs('agenda.*');
+    $isFinancialEntries = request()->routeIs('financial-entries.*');
     $isCustomers = request()->routeIs('customers.*');
+    $isOfficeAccess = request()->routeIs('office-access.*');
     $isProfile = request()->routeIs('profile.edit');
+    $canManageOfficeAccess = $user && in_array($user->role, [\App\Models\User::ROLE_ADMIN, \App\Models\User::ROLE_ENTERPRISE_ADMIN], true);
 @endphp
 <aside class="sidebar" aria-label="Navegação principal">
     <div class="sidebar-header">
@@ -26,6 +31,7 @@
             </span>
             <span>Dashboard</span>
         </a>
+        @unless($isClientUser)
         <div class="sidebar-group">
             <span class="sidebar-group-title">DataJud</span>
             <a href="{{ route('datajud.index') }}" class="sidebar-link {{ $isPesquisa ? 'sidebar-link-active' : '' }}">
@@ -64,6 +70,15 @@
                 </span>
                 <span>Agenda</span>
             </a>
+            <a href="{{ route('financial-entries.index') }}" class="sidebar-link {{ $isFinancialEntries ? 'sidebar-link-active' : '' }}">
+                <span class="sidebar-link-icon" aria-hidden="true">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-2.21 0-4 .895-4 2s1.79 2 4 2 4 .895 4 2-1.79 2-4 2m0-10c1.657 0 3 1.343 3 3M12 8c-1.657 0-3 1.343-3 3m3 5v2m0-12V4" />
+                    </svg>
+                </span>
+                <span>Financeiro</span>
+            </a>
         </div>
         <div class="sidebar-group">
             <span class="sidebar-group-title">Cadastros</span>
@@ -73,7 +88,16 @@
                 </span>
                 <span>Clientes</span>
             </a>
+            @if($canManageOfficeAccess)
+            <a href="{{ route('office-access.index') }}" class="sidebar-link {{ $isOfficeAccess ? 'sidebar-link-active' : '' }}">
+                <span class="sidebar-link-icon" aria-hidden="true">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5m10 0v-2a4 4 0 00-4-4H11a4 4 0 00-4 4v2m10 0H7m10-9a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </span>
+                <span>Acessos do escritório</span>
+            </a>
+            @endif
         </div>
+        @endunless
         <div class="sidebar-group">
             <span class="sidebar-group-title">Conta</span>
             <a href="{{ route('profile.edit') }}" class="sidebar-link {{ $isProfile ? 'sidebar-link-active' : '' }} sidebar-link-muted">

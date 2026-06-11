@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\Document;
 use App\Models\DocumentTemplate;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -117,7 +118,11 @@ class DocumentTemplateController extends Controller
         $defaultData = [];
         $customer = null;
         if ($request->filled('customer_id')) {
-            $customer = \App\Models\Customer::find($request->integer('customer_id'));
+            $customerQuery = Customer::query()->whereKey($request->integer('customer_id'));
+            if (! $request->user()->isAdmin()) {
+                $customerQuery->where('enterprise_id', $request->user()->enterprise_id);
+            }
+            $customer = $customerQuery->first();
             if ($customer) {
                 $defaultData = self::customerToPlaceholders($customer);
             }
@@ -220,10 +225,19 @@ class DocumentTemplateController extends Controller
         $customerId = $request->filled('customer_id') && $request->integer('customer_id') > 0
             ? $request->integer('customer_id')
             : null;
-        if ($customerId && !\App\Models\Customer::where('id', $customerId)->exists()) {
-            $customerId = null;
+        $customer = null;
+        if ($customerId) {
+            $customerQuery = Customer::query()->whereKey($customerId);
+            if (! $request->user()->isAdmin()) {
+                $customerQuery->where('enterprise_id', $request->user()->enterprise_id);
+            }
+            $customer = $customerQuery->first();
+            if (! $customer) {
+                $customerId = null;
+            }
         }
         $document = Document::create([
+            'enterprise_id' => $customer?->enterprise_id ?? $request->user()->enterprise_id,
             'title' => $documentTitle,
             'type' => $template->type,
             'document_template_id' => $template->id,

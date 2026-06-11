@@ -14,7 +14,9 @@
     <link rel="apple-touch-icon" href="{{ asset('apple-icon.png') }}">
     
     <!-- Styles e scripts (build Vite: app.css inclui tema; main.js = scroll/nav) -->
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/main.js'])
+    @if (! app()->runningUnitTests() || file_exists(public_path('build/manifest.json')))
+        @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/main.js'])
+    @endif
     
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

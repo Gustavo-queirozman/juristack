@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class EventController extends Controller
 {
@@ -58,7 +59,7 @@ class EventController extends Controller
     public function update(Request $request, Event $event)
     {
         $this->authorizeOwner($event);
-        $data = $this->validated($request, $event->id);
+        $data = $this->validated($request);
 
         $event->update($data);
 
@@ -73,10 +74,12 @@ class EventController extends Controller
         return response()->noContent();
     }
 
-    private function validated(Request $request, ?int $eventId = null): array
+    private function validated(Request $request): array
     {
         return $request->validate([
             'title' => ['required', 'string', 'max:255'],
+            'status' => ['required', 'string', Rule::in(Event::STATUSES)],
+            'category' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
             'starts_at' => ['required', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],

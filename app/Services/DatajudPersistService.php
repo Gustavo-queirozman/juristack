@@ -6,16 +6,19 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\DatajudProcesso;
+use App\Models\User;
 
 class DatajudPersistService
 {
     public function salvarProcesso(array $source, string $tribunal, ?int $userId = null)
     {
         $numeroProcesso = $source['numeroProcesso'] ?? null;
+        $enterpriseId = $userId ? User::whereKey($userId)->value('enterprise_id') : null;
 
         $ctxBase = [
             'tribunal' => $tribunal,
             'user_id' => $userId,
+            'enterprise_id' => $enterpriseId,
             'numero_processo' => $numeroProcesso,
             'grau' => $source['grau'] ?? null,
             'datajud_id' => $source['id'] ?? null,
@@ -26,7 +29,7 @@ class DatajudPersistService
         Log::info('DatajudPersist: iniciar persistência do processo', $ctxBase);
 
         try {
-            $processo = DB::transaction(function () use ($source, $tribunal, $userId, $ctxBase) {
+            $processo = DB::transaction(function () use ($source, $tribunal, $userId, $enterpriseId, $ctxBase) {
 
                 // normalizar datas principais
                 $dataAjuiz = $this->normalizeDate(data_get($source, 'dataAjuizamento'));
@@ -41,6 +44,7 @@ class DatajudPersistService
 
                 $processo = DatajudProcesso::updateOrCreate(
                     [
+                        'enterprise_id' => $enterpriseId,
                         'user_id' => $userId,
                         'tribunal' => $tribunal,
                         'numero_processo' => $source['numeroProcesso'],

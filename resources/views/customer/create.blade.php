@@ -3,9 +3,15 @@
 @section('pageTitle', 'Novo cliente')
 
 @section('content')
+@php
+    $initialTags = collect(old('tags', []))
+        ->filter(fn ($tag) => filled($tag))
+        ->values()
+        ->all();
+@endphp
 <div class="max-w-3xl">
     <p class="text-gray-600 text-sm mb-6">
-        Cadastre um novo cliente (customer). Preencha os campos desejados.
+        Cadastre um novo cliente. Preencha os campos desejados.
     </p>
 
     <form method="POST" action="{{ route('customers.store') }}" class="space-y-6">
@@ -69,7 +75,7 @@
                     <div>
                         <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">Gênero</label>
                         <select name="gender" id="gender" class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm">
-                            <option value="">—</option>
+                            <option value="">-</option>
                             <option value="M" {{ old('gender') === 'M' ? 'selected' : '' }}>Masculino</option>
                             <option value="F" {{ old('gender') === 'F' ? 'selected' : '' }}>Feminino</option>
                             <option value="Outro" {{ old('gender') === 'Outro' ? 'selected' : '' }}>Outro</option>
@@ -85,7 +91,7 @@
                     <div>
                         <label for="marital_status" class="block text-sm font-medium text-gray-700 mb-1">Estado civil</label>
                         <select name="marital_status" id="marital_status" class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm">
-                            <option value="">—</option>
+                            <option value="">-</option>
                             <option value="Solteiro(a)" {{ old('marital_status') === 'Solteiro(a)' ? 'selected' : '' }}>Solteiro(a)</option>
                             <option value="Casado(a)" {{ old('marital_status') === 'Casado(a)' ? 'selected' : '' }}>Casado(a)</option>
                             <option value="Divorciado(a)" {{ old('marital_status') === 'Divorciado(a)' ? 'selected' : '' }}>Divorciado(a)</option>
@@ -93,6 +99,39 @@
                         </select>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-sm font-semibold text-gray-900">Etiquetas</h3>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <label for="tag-input" class="block text-sm font-medium text-gray-700 mb-1">Cadastrar etiqueta para o cliente</label>
+                    <div class="flex flex-col gap-2 sm:flex-row">
+                        <input type="text" id="tag-input" list="available-tags" maxlength="60" placeholder="Ex.: Processo trabalhista"
+                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm">
+                        <button type="button" id="add-tag-btn" class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                            Adicionar etiqueta
+                        </button>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Exemplos: Processo trabalhista, Processo criminal, Contrato, Audiência.
+                    </p>
+                    <datalist id="available-tags">
+                        @foreach($availableTags as $tag)
+                            <option value="{{ $tag }}"></option>
+                        @endforeach
+                    </datalist>
+                    @error('tags')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    @error('tags.*')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div id="tags-empty-state" class="rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-4 text-sm text-gray-500">
+                    Nenhuma etiqueta adicionada.
+                </div>
+                <div id="tags-list" class="hidden flex flex-wrap gap-2"></div>
+                <div id="tags-hidden-inputs"></div>
             </div>
         </div>
 
@@ -111,7 +150,7 @@
                     <div>
                         <label for="state" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                         <select name="state" id="state" class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm @error('state') border-red-500 @enderror">
-                            <option value="">— Selecione o estado —</option>
+                            <option value="">- Selecione o estado -</option>
                             @foreach(config('estados', []) as $uf => $nome)
                                 <option value="{{ $uf }}" {{ old('state') === $uf ? 'selected' : '' }}>{{ $uf }} - {{ $nome }}</option>
                             @endforeach
@@ -157,6 +196,8 @@
 
 <script>
 (function() {
+    var initialTags = @json($initialTags);
+
     function onlyDigits(s) { return (s || '').replace(/\D/g, ''); }
 
     function maskCpf(v) {
@@ -186,6 +227,9 @@
         if (v.length <= 10) return v.replace(/(\d{2})(\d{4})(\d{0,4})/, function(_, a, b, c) { return '(' + a + ') ' + b + (c ? '-' + c : ''); });
         return v.replace(/(\d{2})(\d{5})(\d{0,4})/, function(_, a, b, c) { return '(' + a + ') ' + b + (c ? '-' + c : ''); }).substring(0, 15);
     }
+    function normalizeTag(value) {
+        return (value || '').trim().replace(/\s+/g, ' ');
+    }
 
     var cnp = document.getElementById('cnp');
     var rg = document.getElementById('rg');
@@ -193,6 +237,68 @@
     var mobilePhone = document.getElementById('mobile_phone');
     var phone = document.getElementById('phone');
     var phone2 = document.getElementById('phone_2');
+    var tagInput = document.getElementById('tag-input');
+    var addTagBtn = document.getElementById('add-tag-btn');
+    var tagsList = document.getElementById('tags-list');
+    var tagsHiddenInputs = document.getElementById('tags-hidden-inputs');
+    var tagsEmptyState = document.getElementById('tags-empty-state');
+    var selectedTags = initialTags.slice();
+
+    function renderTags() {
+        if (!tagsList || !tagsHiddenInputs || !tagsEmptyState) return;
+
+        tagsList.innerHTML = '';
+        tagsHiddenInputs.innerHTML = '';
+
+        if (selectedTags.length === 0) {
+            tagsList.classList.add('hidden');
+            tagsEmptyState.classList.remove('hidden');
+            return;
+        }
+
+        tagsList.classList.remove('hidden');
+        tagsEmptyState.classList.add('hidden');
+
+        selectedTags.forEach(function(tag, index) {
+            var chip = document.createElement('span');
+            chip.className = 'inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700';
+            chip.innerHTML = '<span>' + tag + '</span><button type="button" class="text-indigo-500 hover:text-indigo-700" data-index="' + index + '" aria-label="Remover etiqueta">&times;</button>';
+            tagsList.appendChild(chip);
+
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'tags[]';
+            input.value = tag;
+            tagsHiddenInputs.appendChild(input);
+        });
+
+        tagsList.querySelectorAll('button[data-index]').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var index = Number(this.getAttribute('data-index'));
+                selectedTags.splice(index, 1);
+                renderTags();
+            });
+        });
+    }
+
+    function addTag(value) {
+        var normalized = normalizeTag(value);
+        if (!normalized) return;
+
+        var alreadyExists = selectedTags.some(function(tag) {
+            return tag.toLowerCase() === normalized.toLowerCase();
+        });
+
+        if (!alreadyExists) {
+            selectedTags.push(normalized);
+            renderTags();
+        }
+
+        if (tagInput) {
+            tagInput.value = '';
+            tagInput.focus();
+        }
+    }
 
     if (cnp) cnp.addEventListener('input', function() { this.value = maskCnp(this.value); });
     if (rg) rg.addEventListener('input', function() { this.value = maskRg(this.value); });
@@ -200,6 +306,17 @@
     if (mobilePhone) mobilePhone.addEventListener('input', function() { this.value = maskFone(this.value); });
     if (phone) phone.addEventListener('input', function() { this.value = maskFone(this.value); });
     if (phone2) phone2.addEventListener('input', function() { this.value = maskFone(this.value); });
+    if (addTagBtn) addTagBtn.addEventListener('click', function() { addTag(tagInput ? tagInput.value : ''); });
+    if (tagInput) {
+        tagInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' || event.key === ',') {
+                event.preventDefault();
+                addTag(this.value);
+            }
+        });
+    }
+
+    renderTags();
 })();
 </script>
 @endsection

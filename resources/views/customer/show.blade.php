@@ -37,7 +37,7 @@
                 <h3 class="text-sm font-semibold text-gray-900">Dados pessoais</h3>
             </div>
             <div class="p-4 space-y-2 text-sm">
-                @if($customer->cnp)<p class="m-0"><span class="font-medium text-gray-700">CPF/CNP:</span> {{ $customer->cnp }}</p>@endif
+                @if($customer->cnp)<p class="m-0"><span class="font-medium text-gray-700">CPF/CNPJ:</span> {{ $customer->cnp }}</p>@endif
                 @if($customer->rg)<p class="m-0"><span class="font-medium text-gray-700">RG:</span> {{ $customer->rg }}</p>@endif
                 @if($customer->email)<p class="m-0"><span class="font-medium text-gray-700">E-mail:</span> {{ $customer->email }}</p>@endif
                 @if($customer->mobile_phone)<p class="m-0"><span class="font-medium text-gray-700">Celular:</span> {{ $customer->mobile_phone }}</p>@endif
@@ -45,7 +45,17 @@
                 @if($customer->birth_date)<p class="m-0"><span class="font-medium text-gray-700">Nascimento:</span> {{ $customer->birth_date->format('d/m/Y') }}</p>@endif
                 @if($customer->profession)<p class="m-0"><span class="font-medium text-gray-700">Profissão:</span> {{ $customer->profession }}</p>@endif
                 @if($customer->marital_status)<p class="m-0"><span class="font-medium text-gray-700">Estado civil:</span> {{ $customer->marital_status }}</p>@endif
-                @if(!$customer->cnp && !$customer->email && !$customer->mobile_phone && !$customer->phone)
+                @if(!empty($customer->tags))
+                    <div class="pt-2">
+                        <p class="m-0 mb-2 font-medium text-gray-700">Etiquetas:</p>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($customer->tags as $tag)
+                                <span class="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">{{ $tag }}</span>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+                @if(!$customer->cnp && !$customer->email && !$customer->mobile_phone && !$customer->phone && empty($customer->tags))
                     <p class="m-0 text-gray-500">Nenhum dado adicional informado.</p>
                 @endif
             </div>
@@ -144,7 +154,6 @@
 
 </div>
 
-{{-- Modal excluir cliente --}}
 <div id="modal-delete-customer" class="fixed inset-0 z-[10000] hidden items-center justify-center p-4" role="dialog" aria-modal="true">
     <div class="absolute inset-0 bg-black/50" id="modal-delete-backdrop"></div>
     <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
@@ -157,7 +166,6 @@
     </div>
 </div>
 
-{{-- Modal excluir arquivo --}}
 <div id="modal-delete-file" class="fixed inset-0 z-[10000] hidden items-center justify-center p-4" role="dialog" aria-modal="true">
     <div class="absolute inset-0 bg-black/50" id="modal-delete-file-backdrop"></div>
     <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
@@ -213,7 +221,6 @@
         closeFile();
     });
 
-    // Upload: acumular arquivos na lista e enviar todos
     var pendingFiles = [];
     var filesInput = document.getElementById('files-input');
     var pendingList = document.getElementById('pending-files-list');

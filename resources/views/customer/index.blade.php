@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('pageTitle', 'Customers')
+@section('pageTitle', 'Clientes')
 
 @section('content')
 <div class="w-full max-w-full">
     <p class="text-gray-600 text-sm mb-6">
-        Cadastro completo de clientes (customers). Cadastre, edite e anexe arquivos a cada cliente.
+        Cadastro completo de clientes. Cadastre, edite e anexe arquivos a cada cliente.
     </p>
 
     <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -20,9 +20,9 @@
 
     <form method="GET" action="{{ route('customers.index') }}" class="mb-6 flex flex-wrap gap-2 items-end">
         <div class="flex-1 min-w-[200px]">
-            <label for="busca" class="block text-sm font-medium text-gray-700 mb-1">Buscar por nome, e-mail ou CPF/CNP</label>
+            <label for="busca" class="block text-sm font-medium text-gray-700 mb-1">Buscar por nome, e-mail, CPF/CNPJ ou etiqueta</label>
             <input type="text" name="busca" id="busca" value="{{ old('busca', $busca ?? '') }}"
-                   placeholder="Nome, e-mail ou documento"
+                   placeholder="Nome, e-mail, documento ou etiqueta"
                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
         </div>
         <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
@@ -33,6 +33,37 @@
     @if(session('success'))
         <div class="mb-4 rounded-md bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
             {{ session('success') }}
+        </div>
+    @endif
+
+    @if($inviteEnterprise)
+        <div class="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-sm font-semibold text-indigo-900">Link de cadastro do cliente</p>
+                    <p class="mt-1 text-sm text-indigo-800">
+                        Copie e envie este link para o cliente abrir o portal ja vinculado ao escritorio
+                        <span class="font-medium">{{ $inviteEnterprise->name }}</span>.
+                    </p>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                        id="customers-client-register-link"
+                        type="text"
+                        readonly
+                        value="{{ route('register.client', $inviteEnterprise->slug) }}"
+                        class="min-w-[320px] rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm"
+                    >
+                    <button
+                        type="button"
+                        id="customers-copy-client-register-link"
+                        class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                    >
+                        Copiar link
+                    </button>
+                </div>
+            </div>
+            <p id="customers-copy-client-register-feedback" class="mt-2 hidden text-sm text-emerald-700">Link copiado.</p>
         </div>
     @endif
 
@@ -51,8 +82,9 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nome</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CPF/CNP</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CPF/CNPJ</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">E-mail</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Etiquetas</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Telefone</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Arquivos</th>
                             <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Ações</th>
@@ -66,9 +98,20 @@
                                         {{ $customer->name }}
                                     </a>
                                 </td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">{{ $customer->cnp ?? '—' }}</td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ $customer->email ?? '—' }}</td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ $customer->mobile_phone ?? $customer->phone ?? '—' }}</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">{{ $customer->cnp ?? '-' }}</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ $customer->email ?? '-' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">
+                                    @if(!empty($customer->tags))
+                                        <div class="flex flex-wrap gap-1.5">
+                                            @foreach($customer->tags as $tag)
+                                                <span class="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">{{ $tag }}</span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ $customer->mobile_phone ?? $customer->phone ?? '-' }}</td>
                                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                     {{ $customer->files_count ?? 0 }} arquivo(s)
                                 </td>
@@ -136,6 +179,28 @@
         if (formToSubmit) formToSubmit.submit();
         closeModal();
     });
+
+    var copyButton = document.getElementById('customers-copy-client-register-link');
+    var copyInput = document.getElementById('customers-client-register-link');
+    var copyFeedback = document.getElementById('customers-copy-client-register-feedback');
+
+    if (copyButton && copyInput) {
+        copyButton.addEventListener('click', async function() {
+            try {
+                await navigator.clipboard.writeText(copyInput.value);
+            } catch (error) {
+                copyInput.select();
+                document.execCommand('copy');
+            }
+
+            if (copyFeedback) {
+                copyFeedback.classList.remove('hidden');
+                setTimeout(function() {
+                    copyFeedback.classList.add('hidden');
+                }, 2500);
+            }
+        });
+    }
 })();
 </script>
 @endsection

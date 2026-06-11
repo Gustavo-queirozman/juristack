@@ -2,51 +2,69 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DatajudProcesso;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
 {
-
-    // LISTAR TODAS (Kanban)
-    public function index()
+    public function index(Request $request)
     {
-        $tasks = Task::with('users')->latest()->get();
-        $users = User::orderBy('name')->get();
+        $actor = $request->user();
+        $tasks = $this->scopedTasksQuery($actor)
+            ->with(['users', 'processo.customer'])
+            ->latest()
+            ->get();
+        $users = $this->scopedUsersQuery($actor)->orderBy('name')->get();
+        $processes = $this->scopedProcessesQuery($actor)
+            ->with('customer')
+            ->orderByDesc('updated_at')
+            ->get();
+        $priorityOptions = Task::priorityLabels();
 
-        return view('tasks.index', compact('tasks', 'users'));
+        return view('tasks.index', compact('tasks', 'users', 'processes', 'priorityOptions'));
     }
 
-    // FORMULÁRIO DE CRIAÇÃO
-    public function create()
+    public function create(Request $request)
     {
-        $users = User::all();
-        return view('tasks.create', compact('users'));
+        $users = $this->scopedUsersQuery($request->user())->get();
+        $processes = $this->scopedProcessesQuery($request->user())->with('customer')->get();
+        $priorityOptions = Task::priorityLabels();
+
+        return view('tasks.create', compact('users', 'processes', 'priorityOptions'));
     }
 
-    // SALVAR
     public function store(Request $request)
     {
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'status' => 'required|in:pending,in_progress,completed',
-            'users' => 'nullable|array'
+            'due_date' => 'nullable|date',
+            'priority' => 'required|in:low,medium,high,urgent',
+            'datajud_processo_id' => 'nullable|integer|exists:datajud_processos,id',
+            'users' => 'nullable|array',
+            'users.*' => 'integer|exists:users,id',
         ]);
 
+        $actor = $request->user();
+        $userIds = $this->validatedUserIds($actor, $request->input('users', []));
+        $processId = $this->validatedProcessId($actor, $request->integer('datajud_processo_id'));
+
         $task = Task::create([
+            'enterprise_id' => $actor->enterprise_id,
+            'datajud_processo_id' => $processId,
             'title' => $request->title,
             'description' => $request->description,
             'status' => $request->status,
+            'due_date' => $request->input('due_date'),
+            'priority' => $request->input('priority'),
         ]);
 
-        // associar usuários (many-to-many), ignorando valores vazios
-        $userIds = collect($request->input('users', []))
-            ->filter(fn ($id) => filled($id))
-            ->all();
-
-        if (!empty($userIds)) {
+        if (! empty($userIds)) {
             $task->users()->sync($userIds);
         }
 
@@ -54,100 +72,207 @@ class TaskController extends Controller
                          ->with('success', 'Tarefa criada com sucesso!');
     }
 
-    // MOSTRAR UMA
-    public function show(Task $task)
+    public function show(Request $request, int $task)
     {
-        $task->load('users');
+        $task = $this->scopedTask($request->user(), $task)->load(['users', 'processo.customer']);
         return view('tasks.show', compact('task'));
     }
 
-    // FORMULÁRIO DE EDIÇÃO
-    public function edit(Task $task)
+    public function edit(Request $request, int $task)
     {
-        $users = User::all();
-        $task->load('users');
-        return view('tasks.edit', compact('task', 'users'));
+        $task = $this->scopedTask($request->user(), $task)->load(['users', 'processo.customer']);
+        $users = $this->scopedUsersQuery($request->user())->get();
+        $processes = $this->scopedProcessesQuery($request->user())->with('customer')->get();
+        $priorityOptions = Task::priorityLabels();
+
+        return view('tasks.edit', compact('task', 'users', 'processes', 'priorityOptions'));
     }
 
-    // ATUALIZAR
-    public function update(Request $request, Task $task)
+    public function update(Request $request, int $task)
     {
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'status' => 'required|in:pending,in_progress,completed',
-            'users' => 'nullable|array'
+            'due_date' => 'nullable|date',
+            'priority' => 'required|in:low,medium,high,urgent',
+            'datajud_processo_id' => 'nullable|integer|exists:datajud_processos,id',
+            'users' => 'nullable|array',
+            'users.*' => 'integer|exists:users,id',
         ]);
 
-        $task->update($request->only(['title', 'description', 'status']));
+        $actor = $request->user();
+        $taskModel = $this->scopedTask($actor, $task);
+        $userIds = $this->validatedUserIds($actor, $request->input('users', []));
+        $processId = $this->validatedProcessId($actor, $request->integer('datajud_processo_id'));
 
-        $userIds = collect($request->input('users', []))
-            ->filter(fn ($id) => filled($id))
-            ->all();
+        $taskModel->update([
+            'datajud_processo_id' => $processId,
+            'title' => $request->input('title'),
+            'description' => $request->input('description'),
+            'status' => $request->input('status'),
+            'due_date' => $request->input('due_date'),
+            'priority' => $request->input('priority'),
+        ]);
 
-        if (!empty($userIds)) {
-            $task->users()->sync($userIds);
+        if (! empty($userIds)) {
+            $taskModel->users()->sync($userIds);
         } else {
-            $task->users()->detach();
+            $taskModel->users()->detach();
         }
 
         return redirect()->route('tasks.index')
                          ->with('success', 'Tarefa atualizada com sucesso!');
     }
 
-    // DELETAR
-    public function destroy(Task $task)
+    public function destroy(Request $request, int $task)
     {
-        $task->delete();
+        $taskModel = $this->scopedTask($request->user(), $task);
+        $taskModel->delete();
 
         return redirect()->route('tasks.index')
                          ->with('success', 'Tarefa removida com sucesso!');
     }
 
-    public function updateStatus(Request $request, Task $task)
+    public function updateStatus(Request $request, int $task)
     {
         $request->validate([
             'status' => 'required|in:pending,in_progress,completed',
         ]);
 
-        $task->update([
+        $taskModel = $this->scopedTask($request->user(), $task);
+        $taskModel->update([
             'status' => $request->status,
         ]);
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'task' => $task->fresh('users'),
+                'task' => $taskModel->fresh(['users', 'processo.customer']),
             ]);
         }
 
         return back()->with('success', 'Status da tarefa atualizado com sucesso!');
     }
 
-    public function updateAssignee(Request $request, Task $task)
+    public function updateAssignee(Request $request, int $task)
     {
         $data = $request->validate([
             'user_id' => 'nullable|exists:users,id',
         ]);
 
+        $taskModel = $this->scopedTask($request->user(), $task);
         $userId = $data['user_id'] ?? null;
+        $validIds = $this->validatedUserIds($request->user(), $userId ? [$userId] : []);
 
-        $task->users()->sync($userId ? [$userId] : []);
+        $taskModel->users()->sync($validIds);
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'task' => $task->fresh('users'),
+                'task' => $taskModel->fresh(['users', 'processo.customer']),
             ]);
         }
 
         return back()->with('success', 'Responsável da tarefa atualizado com sucesso!');
     }
 
-    // LISTAR USUÁRIOS DA TAREFA
-    public function users(Task $task)
+    public function users(Request $request, int $task)
     {
-        $users = $task->users;
-        return view('tasks.users', compact('task', 'users'));
+        $taskModel = $this->scopedTask($request->user(), $task)->load(['users', 'processo.customer']);
+        $users = $taskModel->users;
+        return view('tasks.users', ['task' => $taskModel, 'users' => $users]);
+    }
+
+    private function scopedTasksQuery(User $user): Builder
+    {
+        $query = Task::query();
+
+        if (! $user->isAdmin()) {
+            $query->where('enterprise_id', $user->enterprise_id);
+        }
+
+        return $query;
+    }
+
+    private function scopedTask(User $user, int $taskId): Task
+    {
+        return $this->scopedTasksQuery($user)->findOrFail($taskId);
+    }
+
+    private function scopedUsersQuery(User $user): Builder
+    {
+        $query = User::query()->whereIn('role', [
+            User::ROLE_ADMIN,
+            User::ROLE_ENTERPRISE_ADMIN,
+            User::ROLE_LAWYER,
+        ]);
+
+        if (! $user->isAdmin()) {
+            $query->where('enterprise_id', $user->enterprise_id);
+        }
+
+        return $query;
+    }
+
+    private function scopedProcessesQuery(User $user): Builder
+    {
+        $query = DatajudProcesso::query();
+
+        if (! $user->isAdmin()) {
+            $query->where('enterprise_id', $user->enterprise_id);
+        }
+
+        return $query;
+    }
+
+    private function validatedUserIds(User $actor, array $userIds): array
+    {
+        $ids = collect($userIds)
+            ->filter(fn ($id) => filled($id))
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        if (empty($ids)) {
+            return [];
+        }
+
+        $validIds = $this->scopedUsersQuery($actor)
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        sort($ids);
+        $sortedValidIds = $validIds;
+        sort($sortedValidIds);
+
+        if ($ids !== $sortedValidIds) {
+            throw ValidationException::withMessages([
+                'users' => 'Selecione apenas usuários válidos da mesma empresa.',
+            ]);
+        }
+
+        return $validIds;
+    }
+
+    private function validatedProcessId(User $actor, ?int $processId): ?int
+    {
+        if (! $processId) {
+            return null;
+        }
+
+        $validProcessId = $this->scopedProcessesQuery($actor)
+            ->whereKey($processId)
+            ->value('id');
+
+        if (! $validProcessId) {
+            throw ValidationException::withMessages([
+                'datajud_processo_id' => 'Selecione apenas processos salvos validos da mesma empresa.',
+            ]);
+        }
+
+        return (int) $validProcessId;
     }
 }

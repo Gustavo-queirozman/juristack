@@ -7,7 +7,9 @@
 
     <title>@yield('title', config('app.name', 'Laravel'))</title>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if (! app()->runningUnitTests() || file_exists(public_path('build/manifest.json')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
     <style>
         .app-layout { display: flex; height: 100vh; overflow: hidden; }
         .sidebar { width: 240px; flex-shrink: 0; background: #1e293b; color: #e2e8f0; display: flex; flex-direction: column; }
@@ -108,4 +110,3 @@
     @stack('scripts')
 </body>
 </html>
-

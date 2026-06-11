@@ -14,6 +14,7 @@
             <input type="text" name="busca" id="busca" value="{{ old('busca', $busca ?? '') }}"
                    placeholder="Ex: 0001234-56.2023.8.26.0000 ou parte do número"
                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+            <p class="mt-1 text-xs text-gray-500">A busca tambem considera o CPF/CNPJ e o nome completo do cliente vinculado.</p>
         </div>
         <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
             Buscar
@@ -94,6 +95,10 @@
 
                         <div class="p-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-600 mb-4">
+                                @if($processo->customer)
+                                    <p class="m-0"><span class="font-medium text-gray-700">Cliente:</span> {{ $processo->customer->name }}</p>
+                                    <p class="m-0"><span class="font-medium text-gray-700">CPF/CNPJ:</span> {{ $processo->customer->cnp }}</p>
+                                @endif
                                 @if($processo->orgao_julgador_nome)
                                     <p class="m-0"><span class="font-medium text-gray-700">Juízo:</span> {{ $processo->orgao_julgador_nome }}</p>
                                 @endif

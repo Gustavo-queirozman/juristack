@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
 
 class Document extends Model
@@ -10,6 +11,7 @@ class Document extends Model
     use HasFactory;
 
     protected $fillable = [
+        'enterprise_id',
         'title',
         'type',
         'document_link',
@@ -33,14 +35,18 @@ class Document extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function template()
+    public function enterprise(): BelongsTo
+    {
+        return $this->belongsTo(Enterprise::class);
+    }
+
+    public function template(): BelongsTo
     {
         return $this->belongsTo(DocumentTemplate::class, 'document_template_id');
     }
 
-    public function customer()
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 }
-

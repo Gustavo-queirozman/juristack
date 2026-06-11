@@ -21,6 +21,8 @@ class UserSeeder extends Seeder
                 'name' => 'Admin JuriStack',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => User::ROLE_ADMIN,
+                'is_active' => true,
             ]
         );
     }

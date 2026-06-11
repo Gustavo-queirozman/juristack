@@ -1,12 +1,18 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-// app/Models/DatajudProcesso.php
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
 class DatajudProcesso extends Model
 {
     protected $fillable = [
         'user_id',
+        'enterprise_id',
+        'customer_id',
         'datajud_id',
         'tribunal',
         'numero_processo',
@@ -34,15 +40,34 @@ class DatajudProcesso extends Model
         'indexed_at' => 'datetime',
     ];
 
-    public function assuntos()
+    public function enterprise(): BelongsTo
+    {
+        return $this->belongsTo(Enterprise::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function assuntos(): HasMany
     {
         return $this->hasMany(DatajudAssunto::class, 'processo_id');
     }
 
-    public function movimentos()
+    public function movimentos(): HasMany
     {
         return $this->hasMany(DatajudMovimento::class, 'processo_id')
                     ->orderBy('data_hora', 'desc');
     }
-}
 
+    public function latestMovement(): HasOne
+    {
+        return $this->hasOne(DatajudMovimento::class, 'processo_id')->latestOfMany('data_hora');
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'datajud_processo_id');
+    }
+}

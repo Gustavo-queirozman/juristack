@@ -9,6 +9,11 @@ return new class extends Migration {
     {
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
+               $table->foreignId('customer_id')
+        ->nullable()
+        ->constrained()
+        ->nullOnDelete();
+
             $table->string('title'); // titulo_documento
             $table->enum('type', ['power_of_attorney', 'contract', 'petition']);
             $table->string('document_link');

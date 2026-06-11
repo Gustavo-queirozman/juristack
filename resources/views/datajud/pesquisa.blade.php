@@ -79,6 +79,12 @@
                                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     </div>
                 </div>
+                <div class="mb-4">
+                    <label for="cpf_cliente" class="block text-sm font-medium text-gray-700 mb-1">CPF do cliente</label>
+                    <input type="text" name="cpf_cliente" id="cpf_cliente"
+                           placeholder="Ex: 123.456.789-09"
+                           class="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
                 <div class="rounded-md bg-indigo-50 border border-indigo-200 px-4 py-3 text-sm text-indigo-800 mb-4">
                     Preencha o <strong>número do processo</strong> no formato do tribunal e clique em Pesquisar.
                 </div>
@@ -322,6 +328,13 @@
 
             function runSave(btnEl) {
                 if (!btnEl || btnEl.dataset.saved === '1') return;
+                var cpfInput = document.getElementById('cpf_cliente');
+                var cpfCliente = cpfInput ? (cpfInput.value || '').trim() : '';
+                if (!cpfCliente) {
+                    showToast('info', 'CPF obrigatorio', 'Informe o CPF do cliente para vincular e salvar o processo.');
+                    if (cpfInput) cpfInput.focus();
+                    return;
+                }
                 var cardEl = btnEl.closest('[id^="result-card-"]');
                 var overlay = cardEl ? cardEl.querySelector('.save-loading-overlay') : null;
                 var allSaveBtns = cardEl ? cardEl.querySelectorAll('[data-role="save-process"]') : [btnEl];
@@ -336,7 +349,7 @@
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ tribunal: tribunal, source: source })
+                    body: JSON.stringify({ tribunal: tribunal, source: source, cpf_cliente: cpfCliente })
                 }).then(function(r) {
                     return r.text().then(function(text) {
                         try { return JSON.parse(text); } catch(e) { return { error: text || 'Resposta inválida' }; }
@@ -348,7 +361,8 @@
                             b.dataset.saved = '1';
                             b.classList.add('opacity-90');
                         });
-                        showToast('success', 'Processo salvo', 'O processo foi salvo com sucesso. <a href="{{ route('datajud.salvos') }}" class="underline font-medium">Ver Processos salvos</a>');
+                        var customerName = json && json.customer && json.customer.name ? json.customer.name : 'cliente';
+                        showToast('success', 'Processo salvo', 'O processo foi salvo e vinculado a ' + customerName + '. <a href="{{ route('datajud.salvos') }}" class="underline font-medium">Ver Processos salvos</a>');
                     } else {
                         showToast('error', 'Erro ao salvar', (json && json.error) || 'Erro ao salvar processo.');
                         allSaveBtns.forEach(function(b) { b.textContent = prevText; b.disabled = false; });
@@ -533,6 +547,18 @@
     }
 
     startAllMonitors();
+
+    (function setupCpfMask() {
+        var cpfInput = document.getElementById('cpf_cliente');
+        if (!cpfInput) return;
+        cpfInput.addEventListener('input', function() {
+            var digits = (this.value || '').replace(/\D/g, '').slice(0, 11);
+            digits = digits.replace(/(\d{3})(\d)/, '$1.$2');
+            digits = digits.replace(/(\d{3})(\d)/, '$1.$2');
+            digits = digits.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            this.value = digits;
+        });
+    })();
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
