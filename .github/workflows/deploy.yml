@@ -18,13 +18,27 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd ${{ secrets.PROJECT_PATH }}
+
             git pull origin main
 
             composer install --no-dev --optimize-autoloader
+
             php artisan migrate --force
+
+            php artisan config:clear
+            php artisan route:clear
+            php artisan view:clear
+            php artisan cache:clear
+
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+
+            sudo chown -R $USER:www-data storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+
+            sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
+            sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
 
             sudo systemctl restart php8.3-fpm
             sudo systemctl reload nginx
