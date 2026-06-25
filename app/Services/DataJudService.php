@@ -46,19 +46,21 @@ class DataJudService
         return $headers;
     }
 
-    public function normalizeProcessNumber(?string $numero): ?string
-    {
-        if (! $numero) return null;
-
-        $normalized = preg_replace('/[^0-9A-Za-z\.\-]/', '', $numero);
-
-        Log::debug('DataJud normalizeProcessNumber', [
-            'original' => $numero,
-            'normalized' => $normalized,
-        ]);
-
-        return $normalized;
+public function normalizeProcessNumber(?string $numero): ?string
+{
+    if (!$numero) {
+        return null;
     }
+
+    $normalized = preg_replace('/\D/', '', $numero);
+
+    Log::debug('DataJud normalizeProcessNumber', [
+        'original' => $numero,
+        'normalized' => $normalized,
+    ]);
+
+    return $normalized;
+}
 
     /**
      * Lista de tribunais suportados para buscas em "Todos os tribunais (ALL)".
