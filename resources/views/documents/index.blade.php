@@ -99,6 +99,7 @@
                         <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Cliente / Relacionado</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tipo</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Modelo</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contratado</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Criado em</th>
                         <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Ações</th>
                     </tr>
@@ -118,6 +119,19 @@
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ \App\Models\Document::TYPES[$doc->type] ?? $doc->type }}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ $doc->template?->title ?? '—' }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                            @if($doc->type === \App\Models\Document::TYPE_CONTRACT)
+                                @if($doc->service_contract_signer_type === 'lawyer' && $doc->serviceContractSignerUser)
+                                    {{ $doc->serviceContractSignerUser->name }}
+                                @elseif($doc->service_contract_signer_type === 'enterprise')
+                                    {{ $doc->enterprise?->name ?? 'Escritorio' }}
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            @else
+                                <span class="text-gray-400">-</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ $doc->created_at->format('d/m/Y') }}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-right">
                             <span class="inline-flex items-center gap-1">

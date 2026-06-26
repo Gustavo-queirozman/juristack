@@ -59,6 +59,20 @@
                     <dt class="text-gray-500">Criado em</dt>
                     <dd class="font-medium text-gray-900">{{ $document->created_at->format('d/m/Y H:i') }}</dd>
                 </div>
+                @if($document->type === \App\Models\Document::TYPE_CONTRACT)
+                <div>
+                    <dt class="text-gray-500">Contratado</dt>
+                    <dd class="font-medium text-gray-900">
+                        @if($document->service_contract_signer_type === 'lawyer' && $document->serviceContractSignerUser)
+                            {{ $document->serviceContractSignerUser->name }}
+                        @elseif($document->service_contract_signer_type === 'enterprise')
+                            {{ $document->enterprise?->name ?? 'Escritorio' }}
+                        @else
+                            -
+                        @endif
+                    </dd>
+                </div>
+                @endif
                 @if($document->document_link)
                 <div class="sm:col-span-2">
                     <dt class="text-gray-500">Arquivo gerado</dt>

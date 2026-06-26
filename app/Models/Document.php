@@ -12,6 +12,8 @@ class Document extends Model
 
     protected $fillable = [
         'enterprise_id',
+        'service_contract_signer_type',
+        'service_contract_signer_user_id',
         'title',
         'type',
         'document_link',
@@ -19,6 +21,8 @@ class Document extends Model
         'document_template_id',
         'customer_id',
     ];
+
+    public const TYPE_CONTRACT = 'contract';
 
     // Tipos permitidos (mesmos do template)
     public const TYPES = [
@@ -48,5 +52,10 @@ class Document extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function serviceContractSignerUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'service_contract_signer_user_id');
     }
 }

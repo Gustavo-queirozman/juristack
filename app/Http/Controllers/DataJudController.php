@@ -8,9 +8,11 @@ use App\Models\ProcessoMonitor;
 use App\Models\User;
 use App\Services\DataJudService;
 use App\Services\DatajudPersistService;
+use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class DataJudController extends Controller
 {
@@ -21,10 +23,17 @@ class DataJudController extends Controller
         $this->service = $service;
     }
 
+    public function index(Request $request)
+    {
+        return view('datajud.pesquisa', [
+            'officeLawyers' => $this->availableResponsibleLawyersFor($request->user()),
+        ]);
+    }
+
     public function salvos(Request $request)
     {
-        $query = DatajudProcesso::with(['assuntos', 'movimentos', 'customer'])
-            ->where('user_id', auth()->id());
+        $query = $this->scopedProcessosQuery($request->user())
+            ->with(['assuntos', 'movimentos', 'customer', 'responsibleLawyer']);
 
         $busca = $request->get('busca');
         if ($busca !== null && $busca !== '') {
@@ -132,6 +141,7 @@ class DataJudController extends Controller
             'tribunal' => 'required|string',
             'source' => 'required',
             'cpf_cliente' => 'required|string',
+            'responsible_lawyer_user_id' => 'nullable|integer',
         ]);
 
         $source = $request->input('source');
@@ -174,6 +184,18 @@ class DataJudController extends Controller
             return response()->json(['error' => 'Cliente nao encontrado para o CPF informado.'], 422);
         }
 
+        try {
+            $responsibleLawyer = $this->resolveResponsibleLawyerForCustomer(
+                $request->user(),
+                $customer,
+                $request->integer('responsible_lawyer_user_id')
+            );
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'error' => $exception->validator->errors()->first('responsible_lawyer_user_id'),
+            ], 422);
+        }
+
         $source['customer_id'] = $customer->id;
 
         try {
@@ -189,6 +211,9 @@ class DataJudController extends Controller
             }
             if (Schema::hasColumn('datajud_processos', 'cliente_id')) {
                 $processoUpdates['cliente_id'] = $customer->id;
+            }
+            if (Schema::hasColumn('datajud_processos', 'responsible_lawyer_user_id')) {
+                $processoUpdates['responsible_lawyer_user_id'] = $responsibleLawyer?->id;
             }
             if ($processoUpdates !== []) {
                 $processo->forceFill($processoUpdates)->save();
@@ -214,6 +239,10 @@ class DataJudController extends Controller
                     'name' => $customer->name,
                     'cnp' => $customer->cnp,
                 ],
+                'responsible_lawyer' => $responsibleLawyer ? [
+                    'id' => $responsibleLawyer->id,
+                    'name' => $responsibleLawyer->name,
+                ] : null,
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -222,9 +251,9 @@ class DataJudController extends Controller
 
     public function showSaved($id)
     {
-        $processo = DatajudProcesso::with(['assuntos', 'movimentos.complementos', 'customer'])
+        $processo = $this->scopedProcessosQuery(request()->user())
+            ->with(['assuntos', 'movimentos.complementos', 'customer', 'responsibleLawyer'])
             ->where('id', $id)
-            ->where('user_id', auth()->id())
             ->firstOrFail();
 
         return view('datajud.salvo', compact('processo'));
@@ -232,8 +261,8 @@ class DataJudController extends Controller
 
     public function atualizarProcesso(Request $request, $id, DatajudPersistService $persist)
     {
-        $processo = DatajudProcesso::where('id', $id)
-            ->where('user_id', auth()->id())
+        $processo = $this->scopedProcessosQuery($request->user())
+            ->where('id', $id)
             ->firstOrFail();
 
         $tribunal = $processo->tribunal;
@@ -294,9 +323,9 @@ class DataJudController extends Controller
 
     public function deleteSaved(Request $request, $id)
     {
-        $processo = DatajudProcesso::with('movimentos.complementos', 'assuntos')
+        $processo = $this->scopedProcessosQuery($request->user())
+            ->with('movimentos.complementos', 'assuntos')
             ->where('id', $id)
-            ->where('user_id', auth()->id())
             ->firstOrFail();
 
         ProcessoMonitor::where('processo_id', $processo->id)->delete();
@@ -325,6 +354,75 @@ class DataJudController extends Controller
         }
 
         return $query;
+    }
+
+    private function scopedProcessosQuery(User $user): Builder
+    {
+        $query = DatajudProcesso::query();
+
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
+        if ($user->enterprise_id) {
+            $query->where('enterprise_id', $user->enterprise_id);
+        }
+
+        if ($user->hasRole(User::ROLE_LAWYER)) {
+            $query->where(function (Builder $builder) use ($user) {
+                $builder->where('responsible_lawyer_user_id', $user->id)
+                    ->orWhere('user_id', $user->id);
+            });
+        }
+
+        return $query;
+    }
+
+    private function availableResponsibleLawyersFor(User $user, ?int $enterpriseId = null): Collection
+    {
+        $enterpriseId = $enterpriseId ?? $user->enterprise_id;
+
+        if (! $enterpriseId) {
+            return collect();
+        }
+
+        return User::query()
+            ->where('enterprise_id', $enterpriseId)
+            ->where('role', User::ROLE_LAWYER)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'oab_state', 'oab_number']);
+    }
+
+    private function resolveResponsibleLawyerForCustomer(User $actor, Customer $customer, ?int $lawyerId): ?User
+    {
+        $lawyers = $this->availableResponsibleLawyersFor($actor, $customer->enterprise_id);
+
+        if ($lawyers->isEmpty()) {
+            if ($lawyerId) {
+                throw ValidationException::withMessages([
+                    'responsible_lawyer_user_id' => 'Nao foi encontrado um advogado ativo neste escritorio.',
+                ]);
+            }
+
+            return null;
+        }
+
+        if (! $lawyerId) {
+            throw ValidationException::withMessages([
+                'responsible_lawyer_user_id' => 'Selecione o advogado responsavel do escritorio para este processo.',
+            ]);
+        }
+
+        $lawyer = $lawyers->firstWhere('id', $lawyerId);
+
+        if (! $lawyer) {
+            throw ValidationException::withMessages([
+                'responsible_lawyer_user_id' => 'Selecione um advogado valido do mesmo escritorio do cliente.',
+            ]);
+        }
+
+        return $lawyer;
     }
 
     private function normalizeDocument(?string $document): string

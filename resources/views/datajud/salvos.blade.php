@@ -99,6 +99,9 @@
                                     <p class="m-0"><span class="font-medium text-gray-700">Cliente:</span> {{ $processo->customer->name }}</p>
                                     <p class="m-0"><span class="font-medium text-gray-700">CPF/CNPJ:</span> {{ $processo->customer->cnp }}</p>
                                 @endif
+                                @if($processo->responsibleLawyer)
+                                    <p class="m-0"><span class="font-medium text-gray-700">Advogado responsavel:</span> {{ $processo->responsibleLawyer->name }}</p>
+                                @endif
                                 @if($processo->orgao_julgador_nome)
                                     <p class="m-0"><span class="font-medium text-gray-700">Juízo:</span> {{ $processo->orgao_julgador_nome }}</p>
                                 @endif

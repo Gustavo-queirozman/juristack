@@ -13,6 +13,7 @@ class DatajudProcesso extends Model
         'user_id',
         'enterprise_id',
         'customer_id',
+        'responsible_lawyer_user_id',
         'datajud_id',
         'tribunal',
         'numero_processo',
@@ -48,6 +49,11 @@ class DatajudProcesso extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function responsibleLawyer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'responsible_lawyer_user_id');
     }
 
     public function assuntos(): HasMany

@@ -18,7 +18,7 @@ Route::middleware(['auth', 'role:admin,enterprise_admin,lawyer'])->group(functio
         'index', 'store', 'show', 'update', 'destroy',
     ]);
 
-    Route::get('/datajud/pesquisa', fn () => view('datajud.pesquisa'))->name('datajud.index');
+    Route::get('/datajud/pesquisa', [DataJudController::class, 'index'])->name('datajud.index');
     Route::get('/datajud/salvos', [DataJudController::class, 'salvos'])->name('datajud.salvos');
     Route::post('/datajud/salvar', [DataJudController::class, 'salvarProcesso'])->name('datajud.salvar');
     Route::get('/datajud/salvo/{id}', [DataJudController::class, 'showSaved'])->name('datajud.salvo.show');

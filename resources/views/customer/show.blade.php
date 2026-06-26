@@ -421,6 +421,11 @@
                                             - {{ $folder['processo']->classe_nome }}
                                         @endif
                                     </p>
+                                    @if($folder['processo']->responsibleLawyer)
+                                        <p class="mt-1 text-xs text-gray-500">
+                                            Advogado responsavel: {{ $folder['processo']->responsibleLawyer->name }}
+                                        </p>
+                                    @endif
                                 </div>
                                 <span class="text-xs text-gray-500">{{ $folder['files']->count() }} arquivo(s)</span>
                             </div>

@@ -50,6 +50,8 @@ class ServiceContractService
 
         $document = Document::create([
             'enterprise_id' => $customer->enterprise_id ?? $actor->enterprise_id,
+            'service_contract_signer_type' => $signer['type'],
+            'service_contract_signer_user_id' => $signer['user_id'] ?? null,
             'title' => 'Contrato de prestação de serviços - ' . $customer->name,
             'type' => 'contract',
             'document_link' => Storage::disk('public')->url($relativePath),
@@ -106,6 +108,7 @@ class ServiceContractService
 
             return [
                 'type' => 'lawyer',
+                'user_id' => $signerUser->id,
                 'name' => $signerUser->name,
                 'email' => $signerUser->email,
                 'qualification' => $qualification,
@@ -123,6 +126,7 @@ class ServiceContractService
 
         return [
             'type' => 'enterprise',
+            'user_id' => null,
             'name' => $enterprise?->name ?: 'Escritório não informado',
             'email' => $enterprise?->email ?: $actor->email,
             'qualification' => collect(['sociedade de advocacia', $representative])->filter()->implode(', '),

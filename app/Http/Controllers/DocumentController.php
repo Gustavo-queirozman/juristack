@@ -16,7 +16,7 @@ class DocumentController extends Controller
     public function listDocuments(Request $request)
     {
         $actor = $request->user();
-        $query = $this->scopedDocumentsQuery($actor)->with(['template', 'customer']);
+        $query = $this->scopedDocumentsQuery($actor)->with(['template', 'customer', 'enterprise', 'serviceContractSignerUser']);
 
         if ($request->filled('type')) {
             $query->where('type', $request->string('type'));
@@ -48,7 +48,7 @@ class DocumentController extends Controller
 
     public function showDocument(Request $request, int $id)
     {
-        $document = $this->scopedDocument($request->user(), $id)->load(['template', 'customer']);
+        $document = $this->scopedDocument($request->user(), $id)->load(['template', 'customer', 'enterprise', 'serviceContractSignerUser']);
 
         if ($request->expectsJson()) {
             return response()->json($document);

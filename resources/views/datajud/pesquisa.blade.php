@@ -85,8 +85,25 @@
                            placeholder="Ex: 123.456.789-09"
                            class="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                 </div>
+                <div class="mb-4">
+                    <label for="responsible_lawyer_user_id" class="block text-sm font-medium text-gray-700 mb-1">Advogado responsavel do escritorio</label>
+                    <select name="responsible_lawyer_user_id" id="responsible_lawyer_user_id"
+                            class="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <option value="">Selecione o advogado</option>
+                        @foreach(($officeLawyers ?? collect()) as $lawyer)
+                            <option value="{{ $lawyer->id }}" @selected((int) auth()->id() === (int) $lawyer->id)>
+                                {{ $lawyer->name }}{{ $lawyer->oab_state && $lawyer->oab_number ? ' - OAB/' . $lawyer->oab_state . ' ' . $lawyer->oab_number : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @if(($officeLawyers ?? collect())->isEmpty())
+                        <p class="mt-1 text-xs text-amber-700">Nenhum advogado ativo do escritorio foi encontrado para vinculacao.</p>
+                    @else
+                        <p class="mt-1 text-xs text-gray-500">O processo sera atribuido ao advogado selecionado quando for salvo.</p>
+                    @endif
+                </div>
                 <div class="rounded-md bg-indigo-50 border border-indigo-200 px-4 py-3 text-sm text-indigo-800 mb-4">
-                    Preencha o <strong>número do processo</strong> no formato do tribunal e clique em Pesquisar.
+                    Preencha o <strong>numero do processo</strong>, informe o <strong>CPF do cliente</strong> e selecione o <strong>advogado responsavel</strong> antes de salvar.
                 </div>
                 <button type="submit" id="btn-pesquisar" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -330,6 +347,8 @@
                 if (!btnEl || btnEl.dataset.saved === '1') return;
                 var cpfInput = document.getElementById('cpf_cliente');
                 var cpfCliente = cpfInput ? (cpfInput.value || '').trim() : '';
+                var lawyerInput = document.getElementById('responsible_lawyer_user_id');
+                var responsibleLawyerId = lawyerInput ? (lawyerInput.value || '').trim() : '';
                 if (!cpfCliente) {
                     showToast('info', 'CPF obrigatorio', 'Informe o CPF do cliente para vincular e salvar o processo.');
                     if (cpfInput) cpfInput.focus();
@@ -349,7 +368,12 @@
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ tribunal: tribunal, source: source, cpf_cliente: cpfCliente })
+                    body: JSON.stringify({
+                        tribunal: tribunal,
+                        source: source,
+                        cpf_cliente: cpfCliente,
+                        responsible_lawyer_user_id: responsibleLawyerId || null
+                    })
                 }).then(function(r) {
                     return r.text().then(function(text) {
                         try { return JSON.parse(text); } catch(e) { return { error: text || 'Resposta inválida' }; }
@@ -362,7 +386,9 @@
                             b.classList.add('opacity-90');
                         });
                         var customerName = json && json.customer && json.customer.name ? json.customer.name : 'cliente';
-                        showToast('success', 'Processo salvo', 'O processo foi salvo e vinculado a ' + customerName + '. <a href="{{ route('datajud.salvos') }}" class="underline font-medium">Ver Processos salvos</a>');
+                        var lawyerName = json && json.responsible_lawyer && json.responsible_lawyer.name ? json.responsible_lawyer.name : null;
+                        var suffix = lawyerName ? ' e atribuido a ' + lawyerName : '';
+                        showToast('success', 'Processo salvo', 'O processo foi salvo e vinculado a ' + customerName + suffix + '. <a href="{{ route('datajud.salvos') }}" class="underline font-medium">Ver Processos salvos</a>');
                     } else {
                         showToast('error', 'Erro ao salvar', (json && json.error) || 'Erro ao salvar processo.');
                         allSaveBtns.forEach(function(b) { b.textContent = prevText; b.disabled = false; });

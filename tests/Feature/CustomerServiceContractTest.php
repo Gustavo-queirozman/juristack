@@ -57,6 +57,8 @@ class CustomerServiceContractTest extends TestCase
         $relativePath = preg_replace('#^storage/#', '', $relativePath);
 
         $this->assertSame('contract', $document->type);
+        $this->assertSame('enterprise', $document->service_contract_signer_type);
+        $this->assertNull($document->service_contract_signer_user_id);
         Storage::disk('public')->assertExists($relativePath);
 
         Mail::assertSent(ServiceContractSignatureMail::class, function (ServiceContractSignatureMail $mail) use ($document): bool {
@@ -111,6 +113,12 @@ class CustomerServiceContractTest extends TestCase
 
         $response->assertRedirect(route('customers.index'));
 
+        $customer = Customer::where('email', 'carlos@example.com')->firstOrFail();
+        $document = Document::where('customer_id', $customer->id)->firstOrFail();
+
+        $this->assertSame('lawyer', $document->service_contract_signer_type);
+        $this->assertSame($lawyer->id, $document->service_contract_signer_user_id);
+
         Mail::assertSent(ServiceContractSignatureMail::class, function (ServiceContractSignatureMail $mail) use ($lawyer): bool {
             return $mail->hasTo('carlos@example.com')
                 && ($mail->signer['type'] ?? null) === 'lawyer'
@@ -151,6 +159,8 @@ class CustomerServiceContractTest extends TestCase
         $response->assertSessionHas('success', 'Contrato de prestacao de servicos enviado para assinatura por e-mail.');
 
         $document = Document::where('customer_id', $customer->id)->firstOrFail();
+        $this->assertSame('enterprise', $document->service_contract_signer_type);
+        $this->assertNull($document->service_contract_signer_user_id);
 
         Mail::assertSent(ServiceContractSignatureMail::class, function (ServiceContractSignatureMail $mail) use ($document): bool {
             return $mail->hasTo('mariana@example.com')

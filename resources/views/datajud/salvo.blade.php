@@ -62,6 +62,18 @@
                             <p class="text-gray-900 m-0">{{ $processo->orgao_julgador_nome }}</p>
                         </div>
                     @endif
+                    @if($processo->customer)
+                        <div>
+                            <p class="text-gray-500 font-medium m-0 mb-0.5">Cliente</p>
+                            <p class="text-gray-900 m-0">{{ $processo->customer->name }}</p>
+                        </div>
+                    @endif
+                    @if($processo->responsibleLawyer)
+                        <div>
+                            <p class="text-gray-500 font-medium m-0 mb-0.5">Advogado responsavel</p>
+                            <p class="text-gray-900 m-0">{{ $processo->responsibleLawyer->name }}</p>
+                        </div>
+                    @endif
                     @if($processo->assuntos->count())
                         <div>
                             <p class="text-gray-500 font-medium m-0 mb-0.5">Assuntos</p>

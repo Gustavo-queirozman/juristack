@@ -35,6 +35,7 @@ class DataJudProcessosTest extends TestCase
             ->postJson(route('datajud.salvar'), [
                 'tribunal' => 'TJMG',
                 'cpf_cliente' => '123.456.789-09',
+                'responsible_lawyer_user_id' => $user->id,
                 'source' => [
                     'id' => 'proc-1',
                     'numeroProcesso' => '0001234-56.2023.8.13.0001',
@@ -51,6 +52,7 @@ class DataJudProcessosTest extends TestCase
         $this->assertDatabaseHas('datajud_processos', [
             'user_id' => $user->id,
             'customer_id' => $customer->id,
+            'responsible_lawyer_user_id' => $user->id,
             'tribunal' => 'TJMG',
             'numero_processo' => '0001234-56.2023.8.13.0001',
         ]);
@@ -117,6 +119,56 @@ class DataJudProcessosTest extends TestCase
         $responseByCpf->assertOk()
             ->assertSee('0001234-56.2023.8.13.0001')
             ->assertDontSee('0009999-10.2023.8.13.0001');
+    }
+
+    public function test_advogado_responsavel_consegue_ver_processo_salvo_por_outro_usuario_do_escritorio(): void
+    {
+        $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
+
+        $admin = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_ENTERPRISE_ADMIN,
+        ]);
+
+        $lawyer = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_LAWYER,
+            'name' => 'Advogado Responsavel',
+        ]);
+
+        $otherLawyer = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_LAWYER,
+            'name' => 'Outro Advogado',
+        ]);
+
+        $customer = Customer::create([
+            'enterprise_id' => $enterprise->id,
+            'name' => 'Cliente Teste',
+            'cnp' => '12345678909',
+        ]);
+
+        DatajudProcesso::create([
+            'user_id' => $admin->id,
+            'enterprise_id' => $enterprise->id,
+            'customer_id' => $customer->id,
+            'responsible_lawyer_user_id' => $lawyer->id,
+            'tribunal' => 'TJMG',
+            'numero_processo' => '0001234-56.2023.8.13.0001',
+            'grau' => 'G1',
+            'payload' => [],
+        ]);
+
+        $this->actingAs($lawyer)
+            ->get(route('datajud.salvos'))
+            ->assertOk()
+            ->assertSee('0001234-56.2023.8.13.0001')
+            ->assertSee('Advogado Responsavel');
+
+        $this->actingAs($otherLawyer)
+            ->get(route('datajud.salvos'))
+            ->assertOk()
+            ->assertDontSee('0001234-56.2023.8.13.0001');
     }
 
     public function test_dashboard_do_cliente_exibe_ultimo_status_do_processo(): void

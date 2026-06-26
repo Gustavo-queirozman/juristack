@@ -53,7 +53,10 @@ class CustomerController extends Controller
     public function create()
     {
         $availableTags = $this->availableTagsFor(request()->user());
-        $contractSigners = $this->availableContractSignersFor(request()->user());
+        $contractSigners = $this->availableContractSignersFor(
+            request()->user(),
+            request()->user()->enterprise_id
+        );
 
         return view('customer.create', compact('availableTags', 'contractSigners'));
     }
@@ -65,15 +68,19 @@ class CustomerController extends Controller
         $this->mergeCnpForValidation($request);
         $validated = $request->validate(array_merge(
             $this->customerValidationRules(null),
-            $this->serviceContractValidationRules($request, $actor)
+            $this->serviceContractValidationRules($request, $actor, $actor->enterprise_id)
         ));
         $validated = $this->normalizeForStorage($validated);
-        $serviceContractPayload = $this->extractServiceContractPayload($validated, $actor);
 
         $customerData = $this->extractCustomerData($validated);
         $customerData['enterprise_id'] = $actor->isAdmin()
             ? ($validated['enterprise_id'] ?? null)
             : $actor->enterprise_id;
+        $serviceContractPayload = $this->extractServiceContractPayload(
+            $validated,
+            $actor,
+            $customerData['enterprise_id'] ?? $actor->enterprise_id
+        );
 
         $customer = null;
         DB::transaction(function () use ($customerData, $validated, &$customer): void {
@@ -110,9 +117,9 @@ class CustomerController extends Controller
             'files.uploader',
             'documentRequests.processo',
             'documentRequests.requester',
-            'processos' => fn ($query) => $query->latest('updated_at'),
+            'processos' => fn ($query) => $query->with('responsibleLawyer')->latest('updated_at'),
         ]);
-        $contractSigners = $this->availableContractSignersFor(request()->user());
+        $contractSigners = $this->availableContractSignersFor(request()->user(), $customer->enterprise_id);
 
         return view('customer.show', compact('customer', 'contractSigners'));
     }
@@ -314,7 +321,7 @@ class CustomerController extends Controller
         $this->ensureCustomerAccessible($actor, $customer);
 
         $validated = $request->validate(
-            $this->serviceContractValidationRules($request, $actor, true)
+            $this->serviceContractValidationRules($request, $actor, $customer->enterprise_id, true)
         );
 
         if (! $customer->email) {
@@ -330,7 +337,7 @@ class CustomerController extends Controller
             ]);
         }
 
-        $payload = $this->extractServiceContractPayload($validated, $actor, true);
+        $payload = $this->extractServiceContractPayload($validated, $actor, $customer->enterprise_id, true);
 
         try {
             app(ServiceContractService::class)->createAndSend($customer->fresh(['enterprise', 'user']), $actor, $payload);
@@ -453,9 +460,9 @@ class CustomerController extends Controller
         ];
     }
 
-    protected function serviceContractValidationRules(Request $request, User $actor, bool $requireContract = false): array
+    protected function serviceContractValidationRules(Request $request, User $actor, ?int $enterpriseId = null, bool $requireContract = false): array
     {
-        $contractSigners = $this->availableContractSignersFor($actor);
+        $contractSigners = $this->availableContractSignersFor($actor, $enterpriseId);
         $shouldRequire = fn () => $requireContract || $request->boolean('send_service_contract');
 
         return [
@@ -586,21 +593,23 @@ class CustomerController extends Controller
         return $normalized === [] ? null : $normalized;
     }
 
-    private function availableContractSignersFor(User $user)
+    private function availableContractSignersFor(User $user, ?int $enterpriseId = null)
     {
-        if (! $user->enterprise_id) {
+        $enterpriseId = $enterpriseId ?? $user->enterprise_id;
+
+        if (! $enterpriseId) {
             return collect();
         }
 
         return User::query()
-            ->where('enterprise_id', $user->enterprise_id)
+            ->where('enterprise_id', $enterpriseId)
             ->whereIn('role', User::INTERNAL_ROLES)
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'oab_state', 'oab_number']);
     }
 
-    private function extractServiceContractPayload(array $validated, User $actor, bool $forceContract = false): ?array
+    private function extractServiceContractPayload(array $validated, User $actor, ?int $enterpriseId = null, bool $forceContract = false): ?array
     {
         if (! $forceContract && empty($validated['send_service_contract'])) {
             return null;
@@ -613,7 +622,7 @@ class CustomerController extends Controller
         ];
 
         if (($validated['service_contract_signer_type'] ?? null) === 'lawyer') {
-            $signerUser = $this->availableContractSignersFor($actor)
+            $signerUser = $this->availableContractSignersFor($actor, $enterpriseId)
                 ->firstWhere('id', (int) ($validated['service_contract_signer_user_id'] ?? 0));
 
             if (! $signerUser) {
