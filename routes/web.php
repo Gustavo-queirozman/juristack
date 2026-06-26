@@ -29,6 +29,7 @@ Route::middleware(['auth', 'role:admin,enterprise_admin,lawyer'])->group(functio
     Route::resource('customers', CustomerController::class);
     Route::post('customers/{customer}/files', [CustomerController::class, 'uploadForCustomer'])->name('customers.files.store');
     Route::post('customers/{customer}/document-requests', [CustomerController::class, 'storeDocumentRequest'])->name('customers.document-requests.store');
+    Route::post('customers/{customer}/service-contract', [CustomerController::class, 'sendServiceContract'])->name('customers.service-contract.send');
     Route::get('customers/{customer}/files/{file}/download', [CustomerController::class, 'downloadFile'])->name('customers.files.download');
     Route::delete('customers/{customer}/files/{file}', [CustomerController::class, 'destroyFile'])->name('customers.files.destroy');
 

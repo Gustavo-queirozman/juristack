@@ -8,10 +8,20 @@
     $pendingDocumentRequests = $customer->documentRequests
         ->where('status', \App\Models\CustomerDocumentRequest::STATUS_PENDING)
         ->values();
+    $pendingDocumentRequestsCount = $pendingDocumentRequests->count();
     $completedDocumentRequests = $customer->documentRequests
         ->where('status', \App\Models\CustomerDocumentRequest::STATUS_FULFILLED)
         ->take(5)
         ->values();
+    $contractSignatureBlockedReason = null;
+    if (!$customer->email) {
+        $contractSignatureBlockedReason = 'Informe um e-mail no cadastro do cliente antes de solicitar a assinatura.';
+    } elseif ($pendingDocumentRequestsCount > 0) {
+        $contractSignatureBlockedReason = $pendingDocumentRequestsCount === 1
+            ? 'Existe 1 solicitacao de documento pendente. O contrato so pode ser enviado depois que o cliente concluir esse envio.'
+            : 'Existem ' . $pendingDocumentRequestsCount . ' solicitacoes de documentos pendentes. O contrato so pode ser enviado depois que o cliente concluir esses envios.';
+    }
+    $canRequestContractSignature = $contractSignatureBlockedReason === null;
     $processFolders = $customer->processos->map(function ($processo) use ($customer) {
         return [
             'processo' => $processo,
@@ -98,6 +108,81 @@
                 @endif
             </div>
         </div>
+    </div>
+
+    <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden mb-8">
+        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-sm font-semibold text-gray-900">Solicitar assinatura do contrato de prestacao de servicos</h3>
+            <p class="mt-1 text-xs text-gray-500">Envie o contrato por e-mail para o cliente somente quando a documentacao pendente estiver completa.</p>
+        </div>
+        <form method="POST" action="{{ route('customers.service-contract.send', $customer) }}" class="p-4 space-y-4">
+            @csrf
+
+            @if($contractSignatureBlockedReason)
+                <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    {{ $contractSignatureBlockedReason }}
+                </div>
+            @else
+                <div class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                    Cliente apto para receber o contrato por e-mail e assinar.
+                </div>
+            @endif
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="service_contract_signer_type" class="block text-sm font-medium text-gray-700 mb-1">Contrato firmado entre <span class="text-red-500">*</span></label>
+                    <select name="service_contract_signer_type" id="service_contract_signer_type"
+                            class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 @error('service_contract_signer_type') border-red-500 @enderror">
+                        <option value="enterprise" @selected(old('service_contract_signer_type', 'enterprise') === 'enterprise')>Cliente e escritorio</option>
+                        <option value="lawyer" @selected(old('service_contract_signer_type') === 'lawyer')>Cliente e advogado</option>
+                    </select>
+                    @error('service_contract_signer_type')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div id="service-contract-signer-wrapper">
+                    <label for="service_contract_signer_user_id" class="block text-sm font-medium text-gray-700 mb-1">Advogado responsavel</label>
+                    <select name="service_contract_signer_user_id" id="service_contract_signer_user_id"
+                            class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 @error('service_contract_signer_user_id') border-red-500 @enderror">
+                        <option value="">Selecione</option>
+                        @foreach($contractSigners as $signer)
+                            <option value="{{ $signer->id }}" @selected((int) old('service_contract_signer_user_id') === (int) $signer->id)>
+                                {{ $signer->name }}{{ $signer->oab_state && $signer->oab_number ? ' - OAB/'.$signer->oab_state.' '.$signer->oab_number : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @if($contractSigners->isEmpty())
+                        <p class="mt-1 text-xs text-amber-700">Nenhum usuario interno ativo foi encontrado para assinar como advogado.</p>
+                    @endif
+                    @error('service_contract_signer_user_id')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="service_contract_subject" class="block text-sm font-medium text-gray-700 mb-1">Objeto do contrato <span class="text-red-500">*</span></label>
+                    <input type="text" name="service_contract_subject" id="service_contract_subject"
+                           value="{{ old('service_contract_subject', 'atendimento e prestacao de servicos advocaticios') }}" maxlength="255"
+                           class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 @error('service_contract_subject') border-red-500 @enderror">
+                    @error('service_contract_subject')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label for="service_contract_city" class="block text-sm font-medium text-gray-700 mb-1">Cidade de emissao</label>
+                    <input type="text" name="service_contract_city" id="service_contract_city"
+                           value="{{ old('service_contract_city', $customer->city) }}" maxlength="100"
+                           class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 @error('service_contract_city') border-red-500 @enderror">
+                    @error('service_contract_city')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+            </div>
+
+            @error('send_service_contract')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+
+            <div class="flex justify-end">
+                <button type="submit"
+                        @disabled(!$canRequestContractSignature)
+                        class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    Solicitar assinatura do contrato
+                </button>
+            </div>
+        </form>
     </div>
 
     <div class="grid grid-cols-1 gap-6 mb-8 xl:grid-cols-[0.9fr_1.1fr]">
@@ -206,29 +291,30 @@
             <span class="text-xs text-gray-500">{{ $customer->files->count() }} arquivo(s)</span>
         </div>
         <div class="p-4">
-            <div id="upload-files-area" class="mb-8 rounded-lg border border-dashed border-indigo-200 bg-indigo-50/40 p-4">
+            <form id="upload-files-area" method="POST" action="{{ route('customers.files.store', $customer) }}" enctype="multipart/form-data" class="mb-8 rounded-lg border border-dashed border-indigo-200 bg-indigo-50/40 p-4">
+                @csrf
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div class="xl:col-span-2">
                         <label for="files-input" class="block text-sm font-medium text-gray-700 mb-1">Adicionar arquivo(s)</label>
-                        <input type="file" id="files-input" accept=".jpg,.jpeg,.png,.webp,.pdf" multiple
+                        <input type="file" id="files-input" name="files[]" accept=".jpg,.jpeg,.png,.webp,.pdf" multiple
                                class="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-medium file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
                         <p class="mt-1 text-xs text-gray-500">JPG, PNG, WebP ou PDF. Max. 5 MB cada arquivo.</p>
                     </div>
                     <div>
                         <label for="upload-process-select" class="block text-sm font-medium text-gray-700 mb-1">Processo</label>
-                        <select id="upload-process-select" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <select id="upload-process-select" name="datajud_processo_id" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             <option value="">Pasta geral do cliente</option>
                             @foreach($customer->processos as $processo)
-                                <option value="{{ $processo->id }}">{{ $processo->numero_processo }}{{ $processo->tribunal ? ' - ' . $processo->tribunal : '' }}</option>
+                                <option value="{{ $processo->id }}" @selected((string) old('datajud_processo_id') === (string) $processo->id)>{{ $processo->numero_processo }}{{ $processo->tribunal ? ' - ' . $processo->tribunal : '' }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
                         <label for="upload-document-type" class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                        <select id="upload-document-type" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <select id="upload-document-type" name="document_type" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             <option value="">Selecione</option>
                             @foreach(\App\Models\CustomerFile::DOCUMENT_TYPES as $key => $label)
-                                <option value="{{ $key }}">{{ $label }}</option>
+                                <option value="{{ $key }}" @selected(old('document_type') === $key)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -236,10 +322,10 @@
                 <div class="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end">
                     <div class="flex-1">
                         <label for="upload-description" class="block text-sm font-medium text-gray-700 mb-1">Descricao</label>
-                        <input type="text" id="upload-description" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex.: peticao assinada, laudo complementar, documento do autor">
+                        <input type="text" id="upload-description" name="description" value="{{ old('description') }}" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex.: peticao assinada, laudo complementar, documento do autor">
                     </div>
-                    <button type="button" id="upload-submit-btn" disabled class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                        Enviar <span id="upload-count">0</span> arquivo(s)
+                    <button type="submit" id="upload-submit-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Enviar arquivo(s)
                     </button>
                 </div>
                 @error('datajud_processo_id')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -248,9 +334,7 @@
                 @error('files')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                 @error('files.*')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                 <ul id="pending-files-list" class="list-none p-0 m-0 mt-4 space-y-1 text-sm text-gray-700 max-h-40 overflow-y-auto"></ul>
-                <p id="upload-error" class="text-sm text-red-600 hidden mt-2"></p>
-                <p id="upload-success" class="text-sm text-emerald-600 hidden mt-2"></p>
-            </div>
+            </form>
 
             <div class="space-y-6">
                 <section class="rounded-lg border border-gray-200 overflow-hidden">
@@ -436,6 +520,9 @@
     var formFile = null;
     var modalCustomer = document.getElementById('modal-delete-customer');
     var modalFile = document.getElementById('modal-delete-file');
+    var signerType = document.getElementById('service_contract_signer_type');
+    var signerWrapper = document.getElementById('service-contract-signer-wrapper');
+    var signerSelect = document.getElementById('service_contract_signer_user_id');
 
     document.querySelectorAll('.btn-delete-customer').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -475,119 +562,44 @@
         closeFile();
     });
 
-    var pendingFiles = [];
-    var filesInput = document.getElementById('files-input');
-    var processSelect = document.getElementById('upload-process-select');
-    var documentTypeInput = document.getElementById('upload-document-type');
-    var descriptionInput = document.getElementById('upload-description');
-    var pendingList = document.getElementById('pending-files-list');
-    var uploadBtn = document.getElementById('upload-submit-btn');
-    var uploadCount = document.getElementById('upload-count');
-    var uploadError = document.getElementById('upload-error');
-    var uploadSuccess = document.getElementById('upload-success');
-    var uploadUrl = '{{ route('customers.files.store', $customer) }}';
-    var csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+    function toggleSignerField() {
+        if (!signerType || !signerWrapper || !signerSelect) return;
 
-    function renderPendingList() {
+        var requiresLawyer = signerType.value === 'lawyer';
+        signerWrapper.style.display = requiresLawyer ? '' : 'none';
+
+        if (!requiresLawyer) {
+            signerSelect.value = '';
+        }
+    }
+
+    if (signerType) {
+        signerType.addEventListener('change', toggleSignerField);
+        toggleSignerField();
+    }
+
+    var filesInput = document.getElementById('files-input');
+    var pendingList = document.getElementById('pending-files-list');
+ 
+    function renderPendingList(fileList) {
         if (!pendingList) return;
         pendingList.innerHTML = '';
-        pendingFiles.forEach(function(file, index) {
+
+        if (!fileList || fileList.length === 0) {
+            return;
+        }
+
+        Array.from(fileList).forEach(function(file) {
             var li = document.createElement('li');
             li.className = 'flex items-center justify-between gap-2 py-1 border-b border-gray-100';
-            li.innerHTML = '<span class="truncate">' + (file.name || 'Arquivo') + '</span> <span class="text-gray-500 text-xs">' + (file.size ? Math.round(file.size / 1024) + ' KB' : '') + '</span> <button type="button" class="text-red-600 hover:text-red-800 text-xs font-medium remove-pending" data-index="' + index + '">Remover</button>';
+            li.innerHTML = '<span class="truncate">' + (file.name || 'Arquivo') + '</span> <span class="text-gray-500 text-xs">' + (file.size ? Math.round(file.size / 1024) + ' KB' : '') + '</span>';
             pendingList.appendChild(li);
-        });
-        if (uploadCount) uploadCount.textContent = pendingFiles.length;
-        if (uploadBtn) uploadBtn.disabled = pendingFiles.length === 0;
-
-        pendingList.querySelectorAll('.remove-pending').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var i = parseInt(this.getAttribute('data-index'), 10);
-                pendingFiles.splice(i, 1);
-                renderPendingList();
-            });
         });
     }
 
     if (filesInput) {
         filesInput.addEventListener('change', function() {
-            var list = this.files;
-            if (!list || list.length === 0) return;
-            for (var i = 0; i < list.length; i++) {
-                pendingFiles.push(list[i]);
-            }
-            this.value = '';
-            renderPendingList();
-        });
-    }
-
-    if (uploadBtn) {
-        uploadBtn.addEventListener('click', function() {
-            if (pendingFiles.length === 0) return;
-            if (uploadError) { uploadError.classList.add('hidden'); uploadError.textContent = ''; }
-            if (uploadSuccess) uploadSuccess.classList.add('hidden');
-            uploadBtn.disabled = true;
-            uploadBtn.textContent = 'Enviando...';
-
-            var formData = new FormData();
-            formData.append('_token', csrfToken);
-            if (processSelect && processSelect.value) {
-                formData.append('datajud_processo_id', processSelect.value);
-            }
-            if (documentTypeInput && documentTypeInput.value) {
-                formData.append('document_type', documentTypeInput.value);
-            }
-            if (descriptionInput && descriptionInput.value) {
-                formData.append('description', descriptionInput.value);
-            }
-            pendingFiles.forEach(function(file) {
-                formData.append('files[]', file);
-            });
-
-            fetch(uploadUrl, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                },
-                credentials: 'same-origin'
-            })
-            .then(function(res) {
-                return res.text().then(function(text) {
-                    var data = {};
-                    try { data = JSON.parse(text); } catch (e) {}
-                    if (res.ok) {
-                        pendingFiles = [];
-                        if (processSelect) processSelect.value = '';
-                        if (documentTypeInput) documentTypeInput.value = '';
-                        if (descriptionInput) descriptionInput.value = '';
-                        renderPendingList();
-                        if (uploadSuccess) {
-                            uploadSuccess.textContent = (data.message || 'Arquivos enviados.') + ' Atualizando...';
-                            uploadSuccess.classList.remove('hidden');
-                        }
-                        window.location.reload();
-                    } else {
-                        var msg = data.message || 'Erro ao enviar arquivos.';
-                        if (data.errors) {
-                            if (data.errors.files && data.errors.files[0]) msg = data.errors.files[0];
-                            else if (data.errors.datajud_processo_id && data.errors.datajud_processo_id[0]) msg = data.errors.datajud_processo_id[0];
-                            else if (data.errors['files.0'] && data.errors['files.0'][0]) msg = data.errors['files.0'][0];
-                            else if (data.errors['files.*'] && data.errors['files.*'][0]) msg = data.errors['files.*'][0];
-                        }
-                        throw new Error(msg);
-                    }
-                });
-            })
-            .catch(function(err) {
-                if (uploadError) {
-                    uploadError.textContent = err.message || 'Erro ao enviar. Tente novamente.';
-                    uploadError.classList.remove('hidden');
-                }
-                uploadBtn.disabled = false;
-                uploadBtn.innerHTML = 'Enviar <span id="upload-count">' + pendingFiles.length + '</span> arquivo(s)';
-            });
+            renderPendingList(this.files);
         });
     }
 })();

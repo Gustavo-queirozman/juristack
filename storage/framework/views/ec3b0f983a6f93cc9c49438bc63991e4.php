@@ -47,6 +47,27 @@
                     <?php echo csrf_field(); ?>
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
+                            <label for="datajud_processo_id" class="block text-sm font-medium text-gray-700">Processo</label>
+                            <select id="datajud_processo_id" name="datajud_processo_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Anexo geral do cadastro</option>
+                                <?php $__currentLoopData = $clientProcessOptions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $processOption): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($processOption->id); ?>" <?php if((string) old('datajud_processo_id') === (string) $processOption->id): echo 'selected'; endif; ?>>
+                                        <?php echo e($processOption->numero_processo); ?><?php echo e($processOption->tribunal ? ' - ' . $processOption->tribunal : ''); ?>
+
+                                    </option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Selecione um processo quando o anexo fizer parte dele.</p>
+                            <?php $__errorArgs = ['datajud_processo_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-2 text-sm text-red-600"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                        </div>
+                        <div>
                             <label for="document_type" class="block text-sm font-medium text-gray-700">Tipo de documento</label>
                             <select id="document_type" name="document_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">Selecione</option>
@@ -138,6 +159,60 @@ unset($__errorArgs, $__bag); ?>
         </div>
 
         <div class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div class="rounded-xl border border-amber-200 bg-white shadow-sm">
+                <div class="border-b border-amber-200 px-4 py-3 bg-amber-50/70">
+                    <h2 class="text-sm font-semibold text-gray-900">Documentos solicitados</h2>
+                    <p class="mt-1 text-xs text-gray-600">Pendencias abertas pelo escritorio para o seu cadastro ou para um processo especifico.</p>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    <?php $__empty_1 = true; $__currentLoopData = $clientPendingDocumentRequests; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $requestItem): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <div class="px-4 py-3">
+                            <p class="text-sm font-medium text-gray-900"><?php echo e($requestItem->document_type_label); ?></p>
+                            <?php if($requestItem->processo): ?>
+                                <p class="mt-1 text-xs text-indigo-600">
+                                    Processo: <?php echo e($requestItem->processo->numero_processo); ?><?php echo e($requestItem->processo->tribunal ? ' - ' . $requestItem->processo->tribunal : ''); ?>
+
+                                </p>
+                            <?php endif; ?>
+                            <?php if($requestItem->description): ?>
+                                <p class="mt-2 text-sm text-gray-600"><?php echo e($requestItem->description); ?></p>
+                            <?php endif; ?>
+                            <p class="mt-2 text-xs text-gray-400">Solicitado em <?php echo e($requestItem->created_at?->format('d/m/Y H:i')); ?></p>
+                        </div>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                        <div class="px-4 py-6 text-sm text-gray-500">Nenhum documento pendente no momento.</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-200 px-4 py-3">
+                    <h2 class="text-sm font-semibold text-gray-900">Solicitacoes atendidas</h2>
+                    <p class="mt-1 text-xs text-gray-500">Ultimos pedidos de documentos que ja foram identificados como enviados.</p>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    <?php $__empty_1 = true; $__currentLoopData = $clientRecentDocumentRequests; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $requestItem): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <div class="px-4 py-3">
+                            <p class="text-sm font-medium text-gray-900"><?php echo e($requestItem->document_type_label); ?></p>
+                            <?php if($requestItem->processo): ?>
+                                <p class="mt-1 text-xs text-indigo-600">
+                                    Processo: <?php echo e($requestItem->processo->numero_processo); ?><?php echo e($requestItem->processo->tribunal ? ' - ' . $requestItem->processo->tribunal : ''); ?>
+
+                                </p>
+                            <?php endif; ?>
+                            <p class="mt-2 text-xs text-emerald-700">
+                                Atendido em <?php echo e($requestItem->fulfilled_at?->format('d/m/Y H:i') ?: $requestItem->updated_at?->format('d/m/Y H:i')); ?>
+
+                            </p>
+                        </div>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                        <div class="px-4 py-6 text-sm text-gray-500">Nenhuma solicitacao atendida ainda.</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
             <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
                 <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
                     <div>
@@ -159,6 +234,12 @@ unset($__errorArgs, $__bag); ?>
 
                                         <?php endif; ?>
                                     </p>
+                                    <?php if($file->processo): ?>
+                                        <p class="mt-1 text-xs text-indigo-600">
+                                            Processo: <?php echo e($file->processo->numero_processo); ?><?php echo e($file->processo->tribunal ? ' - ' . $file->processo->tribunal : ''); ?>
+
+                                        </p>
+                                    <?php endif; ?>
                                     <p class="mt-1 text-xs text-gray-400">Enviado em <?php echo e($file->created_at?->format('d/m/Y H:i')); ?></p>
                                 </div>
                                 <a href="<?php echo e(route('client.files.download', $file)); ?>" target="_blank" rel="noopener" class="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">

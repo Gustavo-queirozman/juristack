@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\ServiceContractSignatureMail;
 use App\Models\Customer;
+use App\Models\CustomerDocumentRequest;
 use App\Models\Document;
 use App\Models\Enterprise;
 use App\Models\User;
@@ -59,9 +60,13 @@ class CustomerServiceContractTest extends TestCase
         Storage::disk('public')->assertExists($relativePath);
 
         Mail::assertSent(ServiceContractSignatureMail::class, function (ServiceContractSignatureMail $mail) use ($document): bool {
+            $html = $mail->render();
+
             return $mail->hasTo('maria@example.com')
                 && $mail->document->is($document)
-                && ($mail->signer['type'] ?? null) === 'enterprise';
+                && ($mail->signer['type'] ?? null) === 'enterprise'
+                && $mail->envelope()->subject === 'Assinatura pendente: contrato de prestacao de servicos'
+                && str_contains($html, 'assine o contrato');
         });
     }
 
@@ -111,5 +116,99 @@ class CustomerServiceContractTest extends TestCase
                 && ($mail->signer['type'] ?? null) === 'lawyer'
                 && ($mail->signer['name'] ?? null) === $lawyer->name;
         });
+    }
+
+    public function test_internal_user_can_send_service_contract_from_customer_page_when_no_pending_documents(): void
+    {
+        Storage::fake('public');
+        Mail::fake();
+
+        $enterprise = Enterprise::create([
+            'name' => 'Atenas Advocacia',
+            'address' => 'Rua Central, 100, Belo Horizonte/MG',
+        ]);
+
+        $actor = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_ENTERPRISE_ADMIN,
+            'email' => 'admin@atenas.test',
+        ]);
+
+        $customer = Customer::create([
+            'enterprise_id' => $enterprise->id,
+            'name' => 'Mariana Dias',
+            'email' => 'mariana@example.com',
+            'city' => 'Belo Horizonte',
+        ]);
+
+        $response = $this->actingAs($actor)->post(route('customers.service-contract.send', $customer), [
+            'service_contract_signer_type' => 'enterprise',
+            'service_contract_subject' => 'consulta e acompanhamento juridico',
+            'service_contract_city' => 'Belo Horizonte',
+        ]);
+
+        $response->assertRedirect(route('customers.show', $customer));
+        $response->assertSessionHas('success', 'Contrato de prestacao de servicos enviado para assinatura por e-mail.');
+
+        $document = Document::where('customer_id', $customer->id)->firstOrFail();
+
+        Mail::assertSent(ServiceContractSignatureMail::class, function (ServiceContractSignatureMail $mail) use ($document): bool {
+            return $mail->hasTo('mariana@example.com')
+                && $mail->document->is($document)
+                && ($mail->signer['type'] ?? null) === 'enterprise';
+        });
+    }
+
+    public function test_internal_user_cannot_send_service_contract_when_customer_has_pending_document_requests(): void
+    {
+        Storage::fake('public');
+        Mail::fake();
+
+        $enterprise = Enterprise::create([
+            'name' => 'Atenas Advocacia',
+            'address' => 'Rua Central, 100, Belo Horizonte/MG',
+        ]);
+
+        $actor = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_ENTERPRISE_ADMIN,
+            'email' => 'admin@atenas.test',
+        ]);
+
+        $customer = Customer::create([
+            'enterprise_id' => $enterprise->id,
+            'name' => 'Paula Mendes',
+            'email' => 'paula@example.com',
+        ]);
+
+        CustomerDocumentRequest::create([
+            'enterprise_id' => $enterprise->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $actor->id,
+            'document_type' => 'cpf',
+            'description' => 'Envie o CPF atualizado.',
+            'status' => CustomerDocumentRequest::STATUS_PENDING,
+        ]);
+
+        $response = $this
+            ->actingAs($actor)
+            ->from(route('customers.show', $customer))
+            ->post(route('customers.service-contract.send', $customer), [
+                'service_contract_signer_type' => 'enterprise',
+                'service_contract_subject' => 'atendimento previdenciario',
+                'service_contract_city' => 'Belo Horizonte',
+            ]);
+
+        $response->assertRedirect(route('customers.show', $customer));
+        $response->assertSessionHasErrors([
+            'send_service_contract' => 'Nao e possivel solicitar a assinatura enquanto houver documentos pendentes de envio pelo cliente.',
+        ]);
+
+        $this->assertDatabaseMissing('documents', [
+            'customer_id' => $customer->id,
+            'type' => 'contract',
+        ]);
+
+        Mail::assertNothingSent();
     }
 }

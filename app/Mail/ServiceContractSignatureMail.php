@@ -25,7 +25,7 @@ class ServiceContractSignatureMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Contrato de prestação de serviços para assinatura',
+            subject: 'Assinatura pendente: contrato de prestacao de servicos',
         );
     }
 

@@ -112,8 +112,9 @@ class CustomerController extends Controller
             'documentRequests.requester',
             'processos' => fn ($query) => $query->latest('updated_at'),
         ]);
+        $contractSigners = $this->availableContractSignersFor(request()->user());
 
-        return view('customer.show', compact('customer'));
+        return view('customer.show', compact('customer', 'contractSigners'));
     }
 
     public function edit(Customer $customer)
@@ -306,6 +307,50 @@ class CustomerController extends Controller
             ->with('success', $message);
     }
 
+    public function sendServiceContract(Request $request, Customer $customer)
+    {
+        $actor = $request->user();
+
+        $this->ensureCustomerAccessible($actor, $customer);
+
+        $validated = $request->validate(
+            $this->serviceContractValidationRules($request, $actor, true)
+        );
+
+        if (! $customer->email) {
+            throw ValidationException::withMessages([
+                'send_service_contract' => 'Informe um e-mail do cliente antes de solicitar a assinatura do contrato.',
+            ]);
+        }
+
+        $pendingRequestsCount = $customer->documentRequests()->pending()->count();
+        if ($pendingRequestsCount > 0) {
+            throw ValidationException::withMessages([
+                'send_service_contract' => 'Nao e possivel solicitar a assinatura enquanto houver documentos pendentes de envio pelo cliente.',
+            ]);
+        }
+
+        $payload = $this->extractServiceContractPayload($validated, $actor, true);
+
+        try {
+            app(ServiceContractService::class)->createAndSend($customer->fresh(['enterprise', 'user']), $actor, $payload);
+        } catch (\Throwable $exception) {
+            Log::error('Falha ao gerar/enviar contrato de prestacao de servicos.', [
+                'customer_id' => $customer->id,
+                'enterprise_id' => $customer->enterprise_id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            throw ValidationException::withMessages([
+                'send_service_contract' => 'Nao foi possivel enviar o contrato para assinatura. Tente novamente.',
+            ]);
+        }
+
+        return redirect()
+            ->route('customers.show', $customer)
+            ->with('success', 'Contrato de prestacao de servicos enviado para assinatura por e-mail.');
+    }
+
     public function uploadFiles(Request $request)
     {
         $user = $request->user();
@@ -408,25 +453,26 @@ class CustomerController extends Controller
         ];
     }
 
-    protected function serviceContractValidationRules(Request $request, User $actor): array
+    protected function serviceContractValidationRules(Request $request, User $actor, bool $requireContract = false): array
     {
         $contractSigners = $this->availableContractSignersFor($actor);
+        $shouldRequire = fn () => $requireContract || $request->boolean('send_service_contract');
 
         return [
             'send_service_contract' => ['nullable', 'boolean'],
             'service_contract_signer_type' => [
                 'nullable',
-                Rule::requiredIf(fn () => $request->boolean('send_service_contract')),
+                Rule::requiredIf($shouldRequire),
                 Rule::in(['enterprise', 'lawyer']),
             ],
             'service_contract_signer_user_id' => [
                 'nullable',
-                Rule::requiredIf(fn () => $request->boolean('send_service_contract') && $request->input('service_contract_signer_type') === 'lawyer'),
+                Rule::requiredIf(fn () => $shouldRequire() && $request->input('service_contract_signer_type') === 'lawyer'),
                 Rule::in($contractSigners->pluck('id')->all()),
             ],
             'service_contract_subject' => [
                 'nullable',
-                Rule::requiredIf(fn () => $request->boolean('send_service_contract')),
+                Rule::requiredIf($shouldRequire),
                 'string',
                 'max:255',
             ],
@@ -554,9 +600,9 @@ class CustomerController extends Controller
             ->get(['id', 'name', 'email', 'oab_state', 'oab_number']);
     }
 
-    private function extractServiceContractPayload(array $validated, User $actor): ?array
+    private function extractServiceContractPayload(array $validated, User $actor, bool $forceContract = false): ?array
     {
-        if (empty($validated['send_service_contract'])) {
+        if (! $forceContract && empty($validated['send_service_contract'])) {
             return null;
         }
 

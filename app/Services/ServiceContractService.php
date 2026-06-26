@@ -40,6 +40,11 @@ class ServiceContractService
         $filename = 'contrato-prestacao-servicos-' . $customer->id . '-' . $generatedAt->format('YmdHis') . '.pdf';
         $relativePath = $directory . '/' . $filename;
         $absolutePath = Storage::disk('public')->path($relativePath);
+        $absoluteDirectory = dirname($absolutePath);
+
+        if (! is_dir($absoluteDirectory)) {
+            mkdir($absoluteDirectory, 0777, true);
+        }
 
         Pdf::loadHTML($html)->save($absolutePath);
 
