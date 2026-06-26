@@ -32,6 +32,8 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'role' => User::ROLE_LAWYER,
             'is_active' => true,
+            'oab_state' => fake()->stateAbbr(),
+            'oab_number' => (string) fake()->numberBetween(10000, 999999),
             'remember_token' => Str::random(10),
         ];
     }

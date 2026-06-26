@@ -57,6 +57,9 @@ class OfficeAccessController extends Controller
     {
         $actor = $request->user();
         $validated = $request->validate($this->rules($actor));
+        $validated['oab_state'] = isset($validated['oab_state'])
+            ? strtoupper((string) $validated['oab_state'])
+            : null;
 
         $enterpriseId = $this->resolveEnterpriseId($actor, $validated['enterprise_id'] ?? null);
 
@@ -67,6 +70,8 @@ class OfficeAccessController extends Controller
             'password' => $validated['password'],
             'role' => $validated['role'],
             'is_active' => (bool) ($validated['is_active'] ?? true),
+            'oab_state' => $validated['oab_state'] ?? null,
+            'oab_number' => $validated['oab_number'] ?? null,
         ]);
 
         return redirect()->route('office-access.index')
@@ -92,6 +97,9 @@ class OfficeAccessController extends Controller
         $this->guardAgainstSelfManagement($actor, $target);
 
         $validated = $request->validate($this->rules($actor, $target));
+        $validated['oab_state'] = isset($validated['oab_state'])
+            ? strtoupper((string) $validated['oab_state'])
+            : null;
         $enterpriseId = $this->resolveEnterpriseId($actor, $validated['enterprise_id'] ?? $target->enterprise_id);
 
         $target->fill([
@@ -100,6 +108,8 @@ class OfficeAccessController extends Controller
             'email' => $validated['email'],
             'role' => $validated['role'],
             'is_active' => (bool) ($validated['is_active'] ?? true),
+            'oab_state' => $validated['oab_state'] ?? null,
+            'oab_number' => $validated['oab_number'] ?? null,
         ]);
 
         if (! empty($validated['password'])) {
@@ -155,6 +165,8 @@ class OfficeAccessController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', $emailRule],
             'role' => ['required', Rule::in(User::INTERNAL_ROLES)],
             'is_active' => ['nullable', 'boolean'],
+            'oab_state' => ['nullable', 'string', 'size:2'],
+            'oab_number' => ['nullable', 'string', 'max:32'],
             'password' => [$target ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
         ];
     }

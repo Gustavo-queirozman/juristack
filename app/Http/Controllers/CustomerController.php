@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerFile;
 use App\Models\DatajudProcesso;
 use App\Models\User;
+use App\Services\ServiceContractService;
 use App\Rules\CepValido;
 use App\Rules\CpfOuCnpjValido;
 use App\Rules\RgValido;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -48,8 +50,9 @@ class CustomerController extends Controller
     public function create()
     {
         $availableTags = $this->availableTagsFor(request()->user());
+        $contractSigners = $this->availableContractSignersFor(request()->user());
 
-        return view('customer.create', compact('availableTags'));
+        return view('customer.create', compact('availableTags', 'contractSigners'));
     }
 
     public function store(Request $request)
@@ -57,21 +60,43 @@ class CustomerController extends Controller
         $actor = $request->user();
 
         $this->mergeCnpForValidation($request);
-        $validated = $request->validate($this->customerValidationRules(null));
+        $validated = $request->validate(array_merge(
+            $this->customerValidationRules(null),
+            $this->serviceContractValidationRules($request, $actor)
+        ));
         $validated = $this->normalizeForStorage($validated);
+        $serviceContractPayload = $this->extractServiceContractPayload($validated, $actor);
 
         $customerData = $this->extractCustomerData($validated);
         $customerData['enterprise_id'] = $actor->isAdmin()
             ? ($validated['enterprise_id'] ?? null)
             : $actor->enterprise_id;
 
-        DB::transaction(function () use ($customerData, $validated): void {
+        $customer = null;
+        DB::transaction(function () use ($customerData, $validated, &$customer): void {
             $customer = Customer::create($customerData);
             $this->syncCustomerLogin($customer, $validated);
         });
 
+        $successMessage = 'Cliente cadastrado com sucesso!';
+
+        if ($customer && $serviceContractPayload !== null) {
+            try {
+                app(ServiceContractService::class)->createAndSend($customer->fresh(['enterprise', 'user']), $actor, $serviceContractPayload);
+                $successMessage = 'Cliente cadastrado com sucesso e contrato enviado para assinatura por e-mail.';
+            } catch (\Throwable $exception) {
+                Log::error('Falha ao gerar/enviar contrato de prestacao de servicos.', [
+                    'customer_id' => $customer->id,
+                    'enterprise_id' => $customer->enterprise_id,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                $successMessage = 'Cliente cadastrado com sucesso, mas o contrato não pôde ser enviado.';
+            }
+        }
+
         return redirect()->route('customers.index')
-            ->with('success', 'Cliente cadastrado com sucesso!');
+            ->with('success', $successMessage);
     }
 
     public function show(Customer $customer)
@@ -326,6 +351,32 @@ class CustomerController extends Controller
         ];
     }
 
+    protected function serviceContractValidationRules(Request $request, User $actor): array
+    {
+        $contractSigners = $this->availableContractSignersFor($actor);
+
+        return [
+            'send_service_contract' => ['nullable', 'boolean'],
+            'service_contract_signer_type' => [
+                'nullable',
+                Rule::requiredIf(fn () => $request->boolean('send_service_contract')),
+                Rule::in(['enterprise', 'lawyer']),
+            ],
+            'service_contract_signer_user_id' => [
+                'nullable',
+                Rule::requiredIf(fn () => $request->boolean('send_service_contract') && $request->input('service_contract_signer_type') === 'lawyer'),
+                Rule::in($contractSigners->pluck('id')->all()),
+            ],
+            'service_contract_subject' => [
+                'nullable',
+                Rule::requiredIf(fn () => $request->boolean('send_service_contract')),
+                'string',
+                'max:255',
+            ],
+            'service_contract_city' => ['nullable', 'string', 'max:100'],
+        ];
+    }
+
     protected function mergeCnpForValidation(Request $request): void
     {
         $cnp = $request->input('cnp');
@@ -390,7 +441,12 @@ class CustomerController extends Controller
             $validated['create_login'],
             $validated['password'],
             $validated['password_confirmation'],
-            $validated['is_active']
+            $validated['is_active'],
+            $validated['send_service_contract'],
+            $validated['service_contract_signer_type'],
+            $validated['service_contract_signer_user_id'],
+            $validated['service_contract_subject'],
+            $validated['service_contract_city']
         );
 
         return $validated;
@@ -425,6 +481,48 @@ class CustomerController extends Controller
             ->all();
 
         return $normalized === [] ? null : $normalized;
+    }
+
+    private function availableContractSignersFor(User $user)
+    {
+        if (! $user->enterprise_id) {
+            return collect();
+        }
+
+        return User::query()
+            ->where('enterprise_id', $user->enterprise_id)
+            ->whereIn('role', User::INTERNAL_ROLES)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'oab_state', 'oab_number']);
+    }
+
+    private function extractServiceContractPayload(array $validated, User $actor): ?array
+    {
+        if (empty($validated['send_service_contract'])) {
+            return null;
+        }
+
+        $payload = [
+            'signer_type' => $validated['service_contract_signer_type'],
+            'subject' => $validated['service_contract_subject'],
+            'city' => $validated['service_contract_city'] ?? null,
+        ];
+
+        if (($validated['service_contract_signer_type'] ?? null) === 'lawyer') {
+            $signerUser = $this->availableContractSignersFor($actor)
+                ->firstWhere('id', (int) ($validated['service_contract_signer_user_id'] ?? 0));
+
+            if (! $signerUser) {
+                throw ValidationException::withMessages([
+                    'service_contract_signer_user_id' => 'Selecione um advogado responsável válido.',
+                ]);
+            }
+
+            $payload['signer_user'] = $signerUser;
+        }
+
+        return $payload;
     }
 
     private function syncCustomerLogin(Customer $customer, array $validated): void

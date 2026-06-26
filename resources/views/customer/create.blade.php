@@ -183,6 +183,69 @@
             </div>
         </div>
 
+        <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-sm font-semibold text-gray-900">Contrato de prestaÃ§Ã£o de serviÃ§os</h3>
+            </div>
+            <div class="p-4 space-y-4">
+                <div class="flex items-center gap-2">
+                    <input type="hidden" name="send_service_contract" value="0">
+                    <input type="checkbox" name="send_service_contract" id="send_service_contract" value="1" {{ old('send_service_contract', '1') ? 'checked' : '' }}
+                           class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                    <label for="send_service_contract" class="text-sm text-gray-700">
+                        Gerar contrato automaticamente e enviar para assinatura no e-mail do cliente
+                    </label>
+                </div>
+
+                <div id="service-contract-fields" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="service_contract_signer_type" class="block text-sm font-medium text-gray-700 mb-1">Contrato firmado entre <span class="text-red-500">*</span></label>
+                            <select name="service_contract_signer_type" id="service_contract_signer_type"
+                                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm @error('service_contract_signer_type') border-red-500 @enderror">
+                                <option value="enterprise" {{ old('service_contract_signer_type', 'enterprise') === 'enterprise' ? 'selected' : '' }}>Cliente e escritÃ³rio</option>
+                                <option value="lawyer" {{ old('service_contract_signer_type') === 'lawyer' ? 'selected' : '' }}>Cliente e advogado</option>
+                            </select>
+                            @error('service_contract_signer_type')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+                        <div id="service-contract-signer-wrapper">
+                            <label for="service_contract_signer_user_id" class="block text-sm font-medium text-gray-700 mb-1">Advogado responsÃ¡vel</label>
+                            <select name="service_contract_signer_user_id" id="service_contract_signer_user_id"
+                                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm @error('service_contract_signer_user_id') border-red-500 @enderror">
+                                <option value="">â€” Selecione â€”</option>
+                                @foreach($contractSigners as $signer)
+                                    <option value="{{ $signer->id }}" {{ (int) old('service_contract_signer_user_id') === (int) $signer->id ? 'selected' : '' }}>
+                                        {{ $signer->name }}{{ $signer->oab_state && $signer->oab_number ? ' - OAB/'.$signer->oab_state.' '.$signer->oab_number : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @if($contractSigners->isEmpty())
+                                <p class="mt-1 text-xs text-amber-700">Nenhum usuÃ¡rio interno ativo foi encontrado para assinar como advogado.</p>
+                            @endif
+                            @error('service_contract_signer_user_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="service_contract_subject" class="block text-sm font-medium text-gray-700 mb-1">Objeto do contrato <span class="text-red-500">*</span></label>
+                            <input type="text" name="service_contract_subject" id="service_contract_subject"
+                                   value="{{ old('service_contract_subject', 'atendimento e prestacao de servicos advocaticios') }}" maxlength="255"
+                                   class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm @error('service_contract_subject') border-red-500 @enderror">
+                            @error('service_contract_subject')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <label for="service_contract_city" class="block text-sm font-medium text-gray-700 mb-1">Cidade de emissÃ£o</label>
+                            <input type="text" name="service_contract_city" id="service_contract_city"
+                                   value="{{ old('service_contract_city', old('city')) }}" maxlength="100"
+                                   class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm @error('service_contract_city') border-red-500 @enderror">
+                            @error('service_contract_city')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="flex flex-wrap gap-2">
             <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                 Cadastrar cliente
@@ -243,6 +306,11 @@
     var tagsHiddenInputs = document.getElementById('tags-hidden-inputs');
     var tagsEmptyState = document.getElementById('tags-empty-state');
     var selectedTags = initialTags.slice();
+    var sendServiceContract = document.getElementById('send_service_contract');
+    var serviceContractFields = document.getElementById('service-contract-fields');
+    var signerType = document.getElementById('service_contract_signer_type');
+    var signerWrapper = document.getElementById('service-contract-signer-wrapper');
+    var signerSelect = document.getElementById('service_contract_signer_user_id');
 
     function renderTags() {
         if (!tagsList || !tagsHiddenInputs || !tagsEmptyState) return;
@@ -300,6 +368,23 @@
         }
     }
 
+    function syncServiceContractFields() {
+        var enabled = !sendServiceContract || sendServiceContract.checked;
+        var isLawyer = signerType && signerType.value === 'lawyer';
+
+        if (serviceContractFields) {
+            serviceContractFields.style.display = enabled ? '' : 'none';
+        }
+
+        if (signerWrapper) {
+            signerWrapper.style.display = enabled && isLawyer ? '' : 'none';
+        }
+
+        if (signerSelect) {
+            signerSelect.disabled = !(enabled && isLawyer);
+        }
+    }
+
     if (cnp) cnp.addEventListener('input', function() { this.value = maskCnp(this.value); });
     if (rg) rg.addEventListener('input', function() { this.value = maskRg(this.value); });
     if (zipCode) zipCode.addEventListener('input', function() { this.value = maskCep(this.value); });
@@ -317,6 +402,9 @@
     }
 
     renderTags();
+    if (sendServiceContract) sendServiceContract.addEventListener('change', syncServiceContractFields);
+    if (signerType) signerType.addEventListener('change', syncServiceContractFields);
+    syncServiceContractFields();
 })();
 </script>
 @endsection

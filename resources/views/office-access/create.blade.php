@@ -72,6 +72,22 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
+                        <label for="oab_state" class="block text-sm font-medium text-gray-700 mb-1">UF da OAB</label>
+                        <input type="text" name="oab_state" id="oab_state" value="{{ old('oab_state') }}" maxlength="2"
+                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm @error('oab_state') border-red-500 @enderror">
+                        <p class="mt-1 text-xs text-gray-500">Opcional. Use quando o acesso for de advogado.</p>
+                        @error('oab_state')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="oab_number" class="block text-sm font-medium text-gray-700 mb-1">Número da OAB</label>
+                        <input type="text" name="oab_number" id="oab_number" value="{{ old('oab_number') }}" maxlength="32"
+                               class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm @error('oab_number') border-red-500 @enderror">
+                        @error('oab_number')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
                         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha inicial <span class="text-red-500">*</span></label>
                         <input type="password" name="password" id="password" required
                                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm @error('password') border-red-500 @enderror">
