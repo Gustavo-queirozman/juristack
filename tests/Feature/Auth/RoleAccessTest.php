@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\Customer;
+use App\Models\DatajudProcesso;
 use App\Models\Enterprise;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -69,6 +70,48 @@ class RoleAccessTest extends TestCase
             'customer_id' => $customer->id,
             'document_type' => 'other',
             'original_name' => 'arquivo.pdf',
+        ]);
+    }
+
+    public function test_client_users_can_upload_files_related_to_their_process(): void
+    {
+        Storage::fake('public');
+
+        $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
+        $client = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_CLIENT,
+        ]);
+        $customer = Customer::create([
+            'user_id' => $client->id,
+            'enterprise_id' => $enterprise->id,
+            'name' => 'Cliente Teste',
+            'email' => 'cliente@example.com',
+        ]);
+        $processo = DatajudProcesso::create([
+            'user_id' => $client->id,
+            'enterprise_id' => $enterprise->id,
+            'customer_id' => $customer->id,
+            'tribunal' => 'TJMG',
+            'numero_processo' => '0001234-56.2023.8.13.0001',
+            'grau' => 'G1',
+            'payload' => [],
+        ]);
+
+        $response = $this
+            ->actingAs($client)
+            ->from('/dashboard')
+            ->post('/customers/upload', [
+                'datajud_processo_id' => $processo->id,
+                'file' => UploadedFile::fake()->create('anexo-processo.pdf', 100, 'application/pdf'),
+            ]);
+
+        $response->assertRedirect('/dashboard');
+        $this->assertDatabaseHas('customer_files', [
+            'customer_id' => $customer->id,
+            'datajud_processo_id' => $processo->id,
+            'uploaded_by_user_id' => $client->id,
+            'original_name' => 'anexo-processo.pdf',
         ]);
     }
 
@@ -200,6 +243,53 @@ class RoleAccessTest extends TestCase
             'role' => User::ROLE_LAWYER,
             'enterprise_id' => $enterprise->id,
             'is_active' => true,
+        ]);
+    }
+
+    public function test_internal_users_can_upload_files_for_customer_processes(): void
+    {
+        Storage::fake('public');
+
+        $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
+        $lawyer = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_LAWYER,
+        ]);
+        $customer = Customer::create([
+            'enterprise_id' => $enterprise->id,
+            'name' => 'Cliente Teste',
+            'email' => 'cliente@example.com',
+        ]);
+        $processo = DatajudProcesso::create([
+            'user_id' => $lawyer->id,
+            'enterprise_id' => $enterprise->id,
+            'customer_id' => $customer->id,
+            'tribunal' => 'TJMG',
+            'numero_processo' => '0001234-56.2023.8.13.0001',
+            'grau' => 'G1',
+            'payload' => [],
+        ]);
+
+        $response = $this
+            ->actingAs($lawyer)
+            ->from(route('customers.show', $customer))
+            ->post(route('customers.files.store', $customer), [
+                'files' => [
+                    UploadedFile::fake()->create('peticao.pdf', 100, 'application/pdf'),
+                ],
+                'datajud_processo_id' => $processo->id,
+                'document_type' => 'other',
+                'description' => 'Peticao inicial',
+            ]);
+
+        $response->assertRedirect(route('customers.show', $customer));
+        $this->assertDatabaseHas('customer_files', [
+            'customer_id' => $customer->id,
+            'datajud_processo_id' => $processo->id,
+            'uploaded_by_user_id' => $lawyer->id,
+            'document_type' => 'other',
+            'description' => 'Peticao inicial',
+            'original_name' => 'peticao.pdf',
         ]);
     }
 }

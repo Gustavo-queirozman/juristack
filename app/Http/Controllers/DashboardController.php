@@ -22,10 +22,11 @@ class DashboardController extends Controller
         $clientFiles = collect();
         $clientDocuments = collect();
         $clientProcesses = collect();
+        $clientProcessOptions = collect();
         $fileChecklist = collect();
 
         if ($isClient) {
-            $customer = $user->customerProfile?->load('files');
+            $customer = $user->customerProfile?->load(['files.processo', 'files.uploader']);
             $totalClientes = $customer ? 1 : 0;
             $totalProcessos = $customer ? DatajudProcesso::where('customer_id', $customer->id)->count() : 0;
             $totalArquivos = $customer ? $customer->files->count() : 0;
@@ -40,6 +41,16 @@ class DashboardController extends Controller
                     ->latest()
                     ->limit(6)
                     ->get();
+                $clientProcessOptions = DatajudProcesso::query()
+                    ->where('customer_id', $customer->id)
+                    ->latest('updated_at')
+                    ->get()
+                    ->unique(fn (DatajudProcesso $processo) => implode('|', [
+                        $processo->tribunal,
+                        $processo->numero_processo,
+                        $processo->grau,
+                    ]))
+                    ->values();
                 $clientProcesses = DatajudProcesso::query()
                     ->with('latestMovement')
                     ->where('customer_id', $customer->id)
@@ -87,6 +98,7 @@ class DashboardController extends Controller
         return view('dashboard', compact(
             'clientDocuments',
             'clientFiles',
+            'clientProcessOptions',
             'clientProcesses',
             'fileChecklist',
             'inviteEnterprise',

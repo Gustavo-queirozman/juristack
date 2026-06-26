@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class CustomerFile extends Model
 {
@@ -19,6 +20,8 @@ class CustomerFile extends Model
 
     protected $fillable = [
         'customer_id',
+        'datajud_processo_id',
+        'uploaded_by_user_id',
         'document_type',
         'description',
         'path',
@@ -32,8 +35,31 @@ class CustomerFile extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function processo(): BelongsTo
+    {
+        return $this->belongsTo(DatajudProcesso::class, 'datajud_processo_id');
+    }
+
+    public function uploader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'uploaded_by_user_id');
+    }
+
     public function getDocumentTypeLabelAttribute(): string
     {
         return self::DOCUMENT_TYPES[$this->document_type] ?? self::DOCUMENT_TYPES['other'];
+    }
+
+    public function getUploaderLabelAttribute(): string
+    {
+        if (! $this->uploader) {
+            return 'Nao identificado';
+        }
+
+        if ($this->uploader->isClient()) {
+            return 'Cliente';
+        }
+
+        return Str::headline((string) ($this->uploader->role ?? 'Escritorio'));
     }
 }

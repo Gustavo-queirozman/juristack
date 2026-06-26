@@ -3,6 +3,19 @@
 @section('pageTitle', $customer->name)
 
 @section('content')
+@php
+    $generalFiles = $customer->files->whereNull('datajud_processo_id')->sortByDesc('created_at')->values();
+    $processFolders = $customer->processos->map(function ($processo) use ($customer) {
+        return [
+            'processo' => $processo,
+            'files' => $customer->files
+                ->where('datajud_processo_id', $processo->id)
+                ->sortByDesc('created_at')
+                ->values(),
+        ];
+    })->values();
+@endphp
+
 <div class="w-full max-w-full">
     @if(session('success'))
         <div class="mb-4 rounded-md bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
@@ -43,7 +56,7 @@
                 @if($customer->mobile_phone)<p class="m-0"><span class="font-medium text-gray-700">Celular:</span> {{ $customer->mobile_phone }}</p>@endif
                 @if($customer->phone)<p class="m-0"><span class="font-medium text-gray-700">Telefone:</span> {{ $customer->phone }}</p>@endif
                 @if($customer->birth_date)<p class="m-0"><span class="font-medium text-gray-700">Nascimento:</span> {{ $customer->birth_date->format('d/m/Y') }}</p>@endif
-                @if($customer->profession)<p class="m-0"><span class="font-medium text-gray-700">Profissão:</span> {{ $customer->profession }}</p>@endif
+                @if($customer->profession)<p class="m-0"><span class="font-medium text-gray-700">Profissao:</span> {{ $customer->profession }}</p>@endif
                 @if($customer->marital_status)<p class="m-0"><span class="font-medium text-gray-700">Estado civil:</span> {{ $customer->marital_status }}</p>@endif
                 @if(!empty($customer->tags))
                     <div class="pt-2">
@@ -63,7 +76,7 @@
 
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-sm font-semibold text-gray-900">Endereço</h3>
+                <h3 class="text-sm font-semibold text-gray-900">Endereco</h3>
             </div>
             <div class="p-4 space-y-2 text-sm">
                 @if($customer->street || $customer->city)
@@ -74,7 +87,7 @@
                         @if($customer->zip_code)CEP {{ $customer->zip_code }}@endif
                     </p>
                 @else
-                    <p class="m-0 text-gray-500">Endereço não informado.</p>
+                    <p class="m-0 text-gray-500">Endereco nao informado.</p>
                 @endif
             </div>
         </div>
@@ -82,83 +95,218 @@
 
     <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-2">
-            <h3 class="text-sm font-semibold text-gray-900 m-0">Arquivos do cliente</h3>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 m-0">Pasta de anexos</h3>
+                <p class="mt-1 text-xs text-gray-500">Arquivos gerais do cliente e anexos separados por processo.</p>
+            </div>
             <span class="text-xs text-gray-500">{{ $customer->files->count() }} arquivo(s)</span>
         </div>
         <div class="p-4">
-            <div id="upload-files-area" class="mb-6">
-                <div class="flex flex-wrap items-end gap-2 mb-3">
-                    <div class="flex-1 min-w-[200px]">
+            <div id="upload-files-area" class="mb-8 rounded-lg border border-dashed border-indigo-200 bg-indigo-50/40 p-4">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div class="xl:col-span-2">
                         <label for="files-input" class="block text-sm font-medium text-gray-700 mb-1">Adicionar arquivo(s)</label>
                         <input type="file" id="files-input" accept=".jpg,.jpeg,.png,.webp,.pdf" multiple
-                               class="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <p class="mt-1 text-xs text-gray-500">Selecione um ou mais. JPG, PNG, WebP ou PDF. Máx. 5 MB cada. Você pode adicionar em várias escolhas.</p>
+                               class="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-medium file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
+                        <p class="mt-1 text-xs text-gray-500">JPG, PNG, WebP ou PDF. Max. 5 MB cada arquivo.</p>
+                    </div>
+                    <div>
+                        <label for="upload-process-select" class="block text-sm font-medium text-gray-700 mb-1">Processo</label>
+                        <select id="upload-process-select" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Pasta geral do cliente</option>
+                            @foreach($customer->processos as $processo)
+                                <option value="{{ $processo->id }}">{{ $processo->numero_processo }}{{ $processo->tribunal ? ' - ' . $processo->tribunal : '' }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="upload-document-type" class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                        <select id="upload-document-type" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Selecione</option>
+                            @foreach(\App\Models\CustomerFile::DOCUMENT_TYPES as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end">
+                    <div class="flex-1">
+                        <label for="upload-description" class="block text-sm font-medium text-gray-700 mb-1">Descricao</label>
+                        <input type="text" id="upload-description" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex.: peticao assinada, laudo complementar, documento do autor">
                     </div>
                     <button type="button" id="upload-submit-btn" disabled class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
                         Enviar <span id="upload-count">0</span> arquivo(s)
                     </button>
                 </div>
-                <ul id="pending-files-list" class="list-none p-0 m-0 space-y-1 text-sm text-gray-700 mb-2 max-h-40 overflow-y-auto"></ul>
-                @error('files')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                @error('files.*')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                <p id="upload-error" class="text-sm text-red-600 hidden mt-1"></p>
-                <p id="upload-success" class="text-sm text-emerald-600 hidden mt-1"></p>
+                @error('datajud_processo_id')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                @error('document_type')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                @error('description')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                @error('files')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                @error('files.*')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                <ul id="pending-files-list" class="list-none p-0 m-0 mt-4 space-y-1 text-sm text-gray-700 max-h-40 overflow-y-auto"></ul>
+                <p id="upload-error" class="text-sm text-red-600 hidden mt-2"></p>
+                <p id="upload-success" class="text-sm text-emerald-600 hidden mt-2"></p>
             </div>
 
-            @if($customer->files->isEmpty())
-                <p class="text-sm text-gray-500 m-0">Nenhum arquivo anexado. Use o formulário acima para enviar.</p>
-            @else
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Nome do arquivo</th>
-                                <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Tamanho</th>
-                                <th scope="col" class="px-4 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            @foreach($customer->files as $file)
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-2 text-sm text-gray-900">
-                                        <a href="{{ route('customers.files.download', [$customer, $file]) }}" target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-800 font-medium">
-                                            {{ $file->original_name }}
-                                        </a>
-                                    </td>
-                                    <td class="px-4 py-2 text-sm text-gray-600">{{ number_format($file->size / 1024, 1) }} KB</td>
-                                    <td class="px-4 py-2 text-right">
-                                        <span class="inline-flex items-center gap-1">
-                                            <a href="{{ route('customers.files.download', [$customer, $file]) }}" target="_blank" rel="noopener" class="p-1.5 text-gray-500 hover:text-indigo-600 rounded hover:bg-gray-100" title="Visualizar">
-                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                            </a>
-                                            <a href="{{ route('customers.files.download', [$customer, $file]) }}?download=1" class="p-1.5 text-gray-500 hover:text-indigo-600 rounded hover:bg-gray-100" title="Baixar">
-                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                            </a>
-                                            <form method="POST" action="{{ route('customers.files.destroy', [$customer, $file]) }}" class="inline form-delete-file">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="button" class="p-1.5 text-gray-500 hover:text-red-600 rounded hover:bg-red-50 btn-delete-file" title="Remover">
-                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                                </button>
-                                            </form>
-                                        </span>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
+            <div class="space-y-6">
+                <section class="rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-2">
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900 m-0">Pasta geral do cliente</h4>
+                            <p class="mt-1 text-xs text-gray-500">Arquivos sem relacao direta com um processo especifico.</p>
+                        </div>
+                        <span class="text-xs text-gray-500">{{ $generalFiles->count() }} arquivo(s)</span>
+                    </div>
+                    <div class="p-4">
+                        @if($generalFiles->isEmpty())
+                            <p class="text-sm text-gray-500 m-0">Nenhum arquivo geral anexado.</p>
+                        @else
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Arquivo</th>
+                                            <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Tipo</th>
+                                            <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Enviado por</th>
+                                            <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Data</th>
+                                            <th scope="col" class="px-4 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Acoes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        @foreach($generalFiles as $file)
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="px-4 py-2 text-sm text-gray-900">
+                                                    <p class="m-0 font-medium">{{ $file->original_name }}</p>
+                                                    <p class="mt-1 text-xs text-gray-500">{{ number_format($file->size / 1024, 1) }} KB</p>
+                                                </td>
+                                                <td class="px-4 py-2 text-sm text-gray-600">
+                                                    {{ $file->document_type_label }}
+                                                    @if($file->description)
+                                                        <p class="mt-1 text-xs text-gray-500">{{ $file->description }}</p>
+                                                    @endif
+                                                </td>
+                                                <td class="px-4 py-2 text-sm text-gray-600">{{ $file->uploader_label }}</td>
+                                                <td class="px-4 py-2 text-sm text-gray-600">{{ $file->created_at?->format('d/m/Y H:i') }}</td>
+                                                <td class="px-4 py-2 text-right">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <a href="{{ route('customers.files.download', [$customer, $file]) }}" target="_blank" rel="noopener" class="p-1.5 text-gray-500 hover:text-indigo-600 rounded hover:bg-gray-100" title="Visualizar">
+                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                                        </a>
+                                                        <a href="{{ route('customers.files.download', [$customer, $file]) }}?download=1" class="p-1.5 text-gray-500 hover:text-indigo-600 rounded hover:bg-gray-100" title="Baixar">
+                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                                        </a>
+                                                        <form method="POST" action="{{ route('customers.files.destroy', [$customer, $file]) }}" class="inline form-delete-file">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="button" class="p-1.5 text-gray-500 hover:text-red-600 rounded hover:bg-red-50 btn-delete-file" title="Remover">
+                                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                            </button>
+                                                        </form>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+                </section>
+
+                <section class="space-y-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900 m-0">Pastas por processo</h4>
+                            <p class="mt-1 text-xs text-gray-500">Os anexos ficam organizados individualmente para cada processo do cliente.</p>
+                        </div>
+                        <span class="text-xs text-gray-500">{{ $customer->processos->count() }} processo(s)</span>
+                    </div>
+
+                    @forelse($processFolders as $folder)
+                        <div class="rounded-lg border border-gray-200 overflow-hidden">
+                            <div class="px-4 py-3 bg-slate-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900 m-0">{{ $folder['processo']->numero_processo }}</p>
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        {{ $folder['processo']->tribunal ?: 'Tribunal nao informado' }}
+                                        @if($folder['processo']->classe_nome)
+                                            - {{ $folder['processo']->classe_nome }}
+                                        @endif
+                                    </p>
+                                </div>
+                                <span class="text-xs text-gray-500">{{ $folder['files']->count() }} arquivo(s)</span>
+                            </div>
+                            <div class="p-4">
+                                @if($folder['files']->isEmpty())
+                                    <p class="text-sm text-gray-500 m-0">Nenhum anexo vinculado a este processo.</p>
+                                @else
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full divide-y divide-gray-200">
+                                            <thead class="bg-gray-50">
+                                                <tr>
+                                                    <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Arquivo</th>
+                                                    <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Tipo</th>
+                                                    <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Enviado por</th>
+                                                    <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Data</th>
+                                                    <th scope="col" class="px-4 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Acoes</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white divide-y divide-gray-200">
+                                                @foreach($folder['files'] as $file)
+                                                    <tr class="hover:bg-gray-50">
+                                                        <td class="px-4 py-2 text-sm text-gray-900">
+                                                            <p class="m-0 font-medium">{{ $file->original_name }}</p>
+                                                            <p class="mt-1 text-xs text-gray-500">{{ number_format($file->size / 1024, 1) }} KB</p>
+                                                        </td>
+                                                        <td class="px-4 py-2 text-sm text-gray-600">
+                                                            {{ $file->document_type_label }}
+                                                            @if($file->description)
+                                                                <p class="mt-1 text-xs text-gray-500">{{ $file->description }}</p>
+                                                            @endif
+                                                        </td>
+                                                        <td class="px-4 py-2 text-sm text-gray-600">{{ $file->uploader_label }}</td>
+                                                        <td class="px-4 py-2 text-sm text-gray-600">{{ $file->created_at?->format('d/m/Y H:i') }}</td>
+                                                        <td class="px-4 py-2 text-right">
+                                                            <span class="inline-flex items-center gap-1">
+                                                                <a href="{{ route('customers.files.download', [$customer, $file]) }}" target="_blank" rel="noopener" class="p-1.5 text-gray-500 hover:text-indigo-600 rounded hover:bg-gray-100" title="Visualizar">
+                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                                                </a>
+                                                                <a href="{{ route('customers.files.download', [$customer, $file]) }}?download=1" class="p-1.5 text-gray-500 hover:text-indigo-600 rounded hover:bg-gray-100" title="Baixar">
+                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                                                </a>
+                                                                <form method="POST" action="{{ route('customers.files.destroy', [$customer, $file]) }}" class="inline form-delete-file">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="button" class="p-1.5 text-gray-500 hover:text-red-600 rounded hover:bg-red-50 btn-delete-file" title="Remover">
+                                                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                                    </button>
+                                                                </form>
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-500">
+                            Nenhum processo vinculado a este cliente ainda.
+                        </div>
+                    @endforelse
+                </section>
+            </div>
         </div>
     </div>
-
 </div>
 
 <div id="modal-delete-customer" class="fixed inset-0 z-[10000] hidden items-center justify-center p-4" role="dialog" aria-modal="true">
     <div class="absolute inset-0 bg-black/50" id="modal-delete-backdrop"></div>
     <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-2">Excluir cliente</h3>
-        <p class="text-gray-600 text-sm mb-4">Tem certeza que deseja excluir este cliente? Os arquivos anexados também serão removidos.</p>
+        <p class="text-gray-600 text-sm mb-4">Tem certeza que deseja excluir este cliente? Os arquivos anexados tambem serao removidos.</p>
         <div class="flex gap-2 justify-end">
             <button type="button" id="modal-delete-cancel" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50">Cancelar</button>
             <button type="button" id="modal-delete-confirm" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">Excluir</button>
@@ -191,6 +339,7 @@
             if (modalCustomer) { modalCustomer.classList.remove('hidden'); modalCustomer.classList.add('flex'); }
         });
     });
+
     document.querySelectorAll('.btn-delete-file').forEach(function(btn) {
         btn.addEventListener('click', function() {
             formFile = this.closest('form');
@@ -202,6 +351,7 @@
         formCustomer = null;
         if (modalCustomer) { modalCustomer.classList.add('hidden'); modalCustomer.classList.remove('flex'); }
     }
+
     function closeFile() {
         formFile = null;
         if (modalFile) { modalFile.classList.add('hidden'); modalFile.classList.remove('flex'); }
@@ -223,6 +373,9 @@
 
     var pendingFiles = [];
     var filesInput = document.getElementById('files-input');
+    var processSelect = document.getElementById('upload-process-select');
+    var documentTypeInput = document.getElementById('upload-document-type');
+    var descriptionInput = document.getElementById('upload-description');
     var pendingList = document.getElementById('pending-files-list');
     var uploadBtn = document.getElementById('upload-submit-btn');
     var uploadCount = document.getElementById('upload-count');
@@ -274,6 +427,15 @@
 
             var formData = new FormData();
             formData.append('_token', csrfToken);
+            if (processSelect && processSelect.value) {
+                formData.append('datajud_processo_id', processSelect.value);
+            }
+            if (documentTypeInput && documentTypeInput.value) {
+                formData.append('document_type', documentTypeInput.value);
+            }
+            if (descriptionInput && descriptionInput.value) {
+                formData.append('description', descriptionInput.value);
+            }
             pendingFiles.forEach(function(file) {
                 formData.append('files[]', file);
             });
@@ -293,9 +455,12 @@
                     try { data = JSON.parse(text); } catch (e) {}
                     if (res.ok) {
                         pendingFiles = [];
+                        if (processSelect) processSelect.value = '';
+                        if (documentTypeInput) documentTypeInput.value = '';
+                        if (descriptionInput) descriptionInput.value = '';
                         renderPendingList();
                         if (uploadSuccess) {
-                            uploadSuccess.textContent = 'Arquivos enviados. Atualizando...';
+                            uploadSuccess.textContent = (data.message || 'Arquivos enviados.') + ' Atualizando...';
                             uploadSuccess.classList.remove('hidden');
                         }
                         window.location.reload();
@@ -303,6 +468,7 @@
                         var msg = data.message || 'Erro ao enviar arquivos.';
                         if (data.errors) {
                             if (data.errors.files && data.errors.files[0]) msg = data.errors.files[0];
+                            else if (data.errors.datajud_processo_id && data.errors.datajud_processo_id[0]) msg = data.errors.datajud_processo_id[0];
                             else if (data.errors['files.0'] && data.errors['files.0'][0]) msg = data.errors['files.0'][0];
                             else if (data.errors['files.*'] && data.errors['files.*'][0]) msg = data.errors['files.*'][0];
                         }

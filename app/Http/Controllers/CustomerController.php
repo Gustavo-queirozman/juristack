@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\CustomerFile;
+use App\Models\DatajudProcesso;
 use App\Models\User;
 use App\Rules\CepValido;
 use App\Rules\CpfOuCnpjValido;
@@ -76,7 +77,11 @@ class CustomerController extends Controller
     public function show(Customer $customer)
     {
         $this->ensureCustomerAccessible(request()->user(), $customer);
-        $customer->load('files');
+        $customer->load([
+            'files.processo',
+            'files.uploader',
+            'processos' => fn ($query) => $query->latest('updated_at'),
+        ]);
 
         return view('customer.show', compact('customer'));
     }
@@ -133,12 +138,18 @@ class CustomerController extends Controller
 
     public function uploadForCustomer(Request $request, Customer $customer)
     {
-        $this->ensureCustomerAccessible($request->user(), $customer);
+        $actor = $request->user();
+
+        $this->ensureCustomerAccessible($actor, $customer);
         $this->validateUploadPayload($request, true);
+
+        $processo = $this->resolveUploadProcess($request, $customer, $actor);
 
         $count = $this->storeCustomerFiles(
             $customer,
             $this->uploadedFilesFromRequest($request),
+            $actor,
+            $processo,
             $request->input('document_type'),
             $request->input('description')
         );
@@ -146,6 +157,13 @@ class CustomerController extends Controller
         $msg = $count === 1
             ? 'Arquivo enviado e vinculado ao cliente.'
             : $count . ' arquivos enviados e vinculados ao cliente.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $msg,
+                'processo' => $processo?->only(['id', 'numero_processo', 'tribunal']),
+            ]);
+        }
 
         return back()->with('success', $msg);
     }
@@ -228,10 +246,13 @@ class CustomerController extends Controller
         abort_unless($customer, 403);
 
         $this->validateUploadPayload($request);
+        $processo = $this->resolveUploadProcess($request, $customer, $user);
 
         $count = $this->storeCustomerFiles(
             $customer,
             $this->uploadedFilesFromRequest($request),
+            $user,
+            $processo,
             $request->input('document_type'),
             $request->input('description')
         );
@@ -463,6 +484,7 @@ class CustomerController extends Controller
     private function validateUploadPayload(Request $request, bool $requireArrayFiles = false): void
     {
         $request->validate([
+            'datajud_processo_id' => ['nullable', 'integer', 'exists:datajud_processos,id'],
             'document_type' => ['nullable', Rule::in(array_keys(CustomerFile::DOCUMENT_TYPES))],
             'description' => ['nullable', 'string', 'max:255'],
             'files' => [$requireArrayFiles ? 'required' : 'nullable', 'array', 'min:1'],
@@ -500,15 +522,49 @@ class CustomerController extends Controller
         return array_values(array_filter($uploadedFiles));
     }
 
-    private function storeCustomerFiles(Customer $customer, array $uploadedFiles, ?string $documentType, ?string $description): int
+    private function resolveUploadProcess(Request $request, Customer $customer, User $actor): ?DatajudProcesso
+    {
+        $processoId = $request->integer('datajud_processo_id');
+        if (! $processoId) {
+            return null;
+        }
+
+        $processo = DatajudProcesso::query()->findOrFail($processoId);
+
+        if ((int) $processo->customer_id !== (int) $customer->id) {
+            throw ValidationException::withMessages([
+                'datajud_processo_id' => 'O processo informado nao pertence a este cliente.',
+            ]);
+        }
+
+        if (! $actor->isAdmin() && (int) $processo->enterprise_id !== (int) $actor->enterprise_id) {
+            abort(403);
+        }
+
+        return $processo;
+    }
+
+    private function storeCustomerFiles(
+        Customer $customer,
+        array $uploadedFiles,
+        User $actor,
+        ?DatajudProcesso $processo,
+        ?string $documentType,
+        ?string $description
+    ): int
     {
         $count = 0;
+        $baseDirectory = $processo
+            ? 'customers/' . $customer->id . '/processos/' . $processo->id
+            : 'customers/' . $customer->id . '/geral';
 
         foreach ($uploadedFiles as $uploaded) {
-            $storedPath = $uploaded->store('customers/' . $customer->id, 'public');
+            $storedPath = $uploaded->store($baseDirectory, 'public');
 
             CustomerFile::create([
                 'customer_id' => $customer->id,
+                'datajud_processo_id' => $processo?->id,
+                'uploaded_by_user_id' => $actor->id,
                 'document_type' => $documentType ?: 'other',
                 'description' => $description,
                 'path' => $storedPath,

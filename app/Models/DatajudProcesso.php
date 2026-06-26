@@ -70,4 +70,9 @@ class DatajudProcesso extends Model
     {
         return $this->hasMany(Task::class, 'datajud_processo_id');
     }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(CustomerFile::class, 'datajud_processo_id');
+    }
 }

@@ -48,6 +48,19 @@
                     @csrf
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
+                            <label for="datajud_processo_id" class="block text-sm font-medium text-gray-700">Processo</label>
+                            <select id="datajud_processo_id" name="datajud_processo_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Anexo geral do cadastro</option>
+                                @foreach($clientProcessOptions as $processOption)
+                                    <option value="{{ $processOption->id }}" @selected((string) old('datajud_processo_id') === (string) $processOption->id)>
+                                        {{ $processOption->numero_processo }}{{ $processOption->tribunal ? ' - ' . $processOption->tribunal : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Selecione um processo quando o anexo fizer parte dele.</p>
+                            @error('datajud_processo_id')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
                             <label for="document_type" class="block text-sm font-medium text-gray-700">Tipo de documento</label>
                             <select id="document_type" name="document_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">Selecione</option>
@@ -122,6 +135,11 @@
                                             · {{ $file->description }}
                                         @endif
                                     </p>
+                                    @if($file->processo)
+                                        <p class="mt-1 text-xs text-indigo-600">
+                                            Processo: {{ $file->processo->numero_processo }}{{ $file->processo->tribunal ? ' - ' . $file->processo->tribunal : '' }}
+                                        </p>
+                                    @endif
                                     <p class="mt-1 text-xs text-gray-400">Enviado em {{ $file->created_at?->format('d/m/Y H:i') }}</p>
                                 </div>
                                 <a href="{{ route('client.files.download', $file) }}" target="_blank" rel="noopener" class="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">

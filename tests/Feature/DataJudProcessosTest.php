@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Customer;
+use App\Models\CustomerFile;
 use App\Models\DatajudMovimento;
 use App\Models\DatajudProcesso;
 use App\Models\Enterprise;
@@ -157,6 +158,61 @@ class DataJudProcessosTest extends TestCase
         $response->assertOk()
             ->assertSee('Ultimo status')
             ->assertSee('Concluso para julgamento')
+            ->assertSee('0001234-56.2023.8.13.0001');
+    }
+
+    public function test_tela_do_cliente_interno_mostra_pasta_geral_e_pasta_por_processo(): void
+    {
+        $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
+        $lawyer = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_LAWYER,
+        ]);
+        $customer = Customer::create([
+            'enterprise_id' => $enterprise->id,
+            'name' => 'Maria da Silva',
+            'email' => 'maria@example.com',
+        ]);
+        $processo = DatajudProcesso::create([
+            'user_id' => $lawyer->id,
+            'enterprise_id' => $enterprise->id,
+            'customer_id' => $customer->id,
+            'tribunal' => 'TJMG',
+            'numero_processo' => '0001234-56.2023.8.13.0001',
+            'grau' => 'G1',
+            'payload' => [],
+        ]);
+
+        CustomerFile::create([
+            'customer_id' => $customer->id,
+            'document_type' => 'other',
+            'uploaded_by_user_id' => $lawyer->id,
+            'path' => 'customers/' . $customer->id . '/geral/cadastro.pdf',
+            'original_name' => 'cadastro.pdf',
+            'mime' => 'application/pdf',
+            'size' => 1234,
+        ]);
+
+        CustomerFile::create([
+            'customer_id' => $customer->id,
+            'datajud_processo_id' => $processo->id,
+            'document_type' => 'other',
+            'uploaded_by_user_id' => $lawyer->id,
+            'path' => 'customers/' . $customer->id . '/processos/' . $processo->id . '/peticao.pdf',
+            'original_name' => 'peticao.pdf',
+            'mime' => 'application/pdf',
+            'size' => 2345,
+        ]);
+
+        $response = $this
+            ->actingAs($lawyer)
+            ->get(route('customers.show', $customer));
+
+        $response->assertOk()
+            ->assertSee('Pasta geral do cliente')
+            ->assertSee('Pastas por processo')
+            ->assertSee('cadastro.pdf')
+            ->assertSee('peticao.pdf')
             ->assertSee('0001234-56.2023.8.13.0001');
     }
 }
