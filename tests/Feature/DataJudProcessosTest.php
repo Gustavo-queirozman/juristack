@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Customer;
+use App\Models\DatajudMovimento;
 use App\Models\DatajudProcesso;
 use App\Models\Enterprise;
 use App\Models\User;
@@ -115,5 +116,47 @@ class DataJudProcessosTest extends TestCase
         $responseByCpf->assertOk()
             ->assertSee('0001234-56.2023.8.13.0001')
             ->assertDontSee('0009999-10.2023.8.13.0001');
+    }
+
+    public function test_dashboard_do_cliente_exibe_ultimo_status_do_processo(): void
+    {
+        $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
+        $clientUser = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_CLIENT,
+        ]);
+
+        $customer = Customer::create([
+            'enterprise_id' => $enterprise->id,
+            'user_id' => $clientUser->id,
+            'name' => 'Maria da Silva',
+            'email' => $clientUser->email,
+        ]);
+
+        $processo = DatajudProcesso::create([
+            'user_id' => $clientUser->id,
+            'enterprise_id' => $enterprise->id,
+            'customer_id' => $customer->id,
+            'tribunal' => 'TJMG',
+            'numero_processo' => '0001234-56.2023.8.13.0001',
+            'grau' => 'G1',
+            'datahora_ultima_atualizacao' => now()->subHour(),
+            'payload' => [],
+        ]);
+
+        DatajudMovimento::create([
+            'processo_id' => $processo->id,
+            'nome' => 'Concluso para julgamento',
+            'data_hora' => now()->subHour(),
+        ]);
+
+        $response = $this
+            ->actingAs($clientUser)
+            ->get(route('dashboard'));
+
+        $response->assertOk()
+            ->assertSee('Ultimo status')
+            ->assertSee('Concluso para julgamento')
+            ->assertSee('0001234-56.2023.8.13.0001');
     }
 }

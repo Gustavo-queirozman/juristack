@@ -212,6 +212,8 @@ unset($__errorArgs, $__bag); ?>
                     <?php
                         $latestMovement = $process->latestMovement;
                         $statusLabel = $latestMovement?->nome ?: 'Em acompanhamento';
+                        $statusDate = $latestMovement?->data_hora ?: $process->datahora_ultima_atualizacao ?: $process->updated_at;
+                        $updatedAt = $process->datahora_ultima_atualizacao ?: $process->updated_at;
                     ?>
                     <div class="px-4 py-4">
                         <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -225,16 +227,19 @@ unset($__errorArgs, $__bag); ?>
 
                                     <?php endif; ?>
                                 </p>
-                                <p class="mt-2 text-sm text-gray-700"><?php echo e($statusLabel); ?></p>
                                 <p class="mt-1 text-xs text-gray-400">
-                                    Ultima atualizacao em <?php echo e($process->updated_at?->format('d/m/Y H:i')); ?>
+                                    Ultima atualizacao em <?php echo e($updatedAt?->format('d/m/Y H:i') ?: 'Nao informada'); ?>
 
                                 </p>
                             </div>
-                            <span class="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-                                <?php echo e($latestMovement?->data_hora?->format('d/m/Y H:i') ?: 'Sem movimentacao detalhada'); ?>
+                            <div class="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 lg:min-w-[240px]">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-600">Ultimo status</p>
+                                <p class="mt-1 text-sm font-medium text-indigo-900"><?php echo e($statusLabel); ?></p>
+                                <p class="mt-1 text-xs text-indigo-700">
+                                    <?php echo e($statusDate?->format('d/m/Y H:i') ?: 'Sem movimentacao detalhada'); ?>
 
-                            </span>
+                                </p>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>

@@ -175,6 +175,8 @@
                     @php
                         $latestMovement = $process->latestMovement;
                         $statusLabel = $latestMovement?->nome ?: 'Em acompanhamento';
+                        $statusDate = $latestMovement?->data_hora ?: $process->datahora_ultima_atualizacao ?: $process->updated_at;
+                        $updatedAt = $process->datahora_ultima_atualizacao ?: $process->updated_at;
                     @endphp
                     <div class="px-4 py-4">
                         <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -186,14 +188,17 @@
                                         · {{ $process->grau }}
                                     @endif
                                 </p>
-                                <p class="mt-2 text-sm text-gray-700">{{ $statusLabel }}</p>
                                 <p class="mt-1 text-xs text-gray-400">
-                                    Ultima atualizacao em {{ $process->updated_at?->format('d/m/Y H:i') }}
+                                    Ultima atualizacao em {{ $updatedAt?->format('d/m/Y H:i') ?: 'Nao informada' }}
                                 </p>
                             </div>
-                            <span class="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-                                {{ $latestMovement?->data_hora?->format('d/m/Y H:i') ?: 'Sem movimentacao detalhada' }}
-                            </span>
+                            <div class="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 lg:min-w-[240px]">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-600">Ultimo status</p>
+                                <p class="mt-1 text-sm font-medium text-indigo-900">{{ $statusLabel }}</p>
+                                <p class="mt-1 text-xs text-indigo-700">
+                                    {{ $statusDate?->format('d/m/Y H:i') ?: 'Sem movimentacao detalhada' }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 @empty
