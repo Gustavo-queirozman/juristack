@@ -77,6 +77,11 @@ class Customer extends Model
         return $this->hasMany(DatajudProcesso::class);
     }
 
+    public function documentRequests(): HasMany
+    {
+        return $this->hasMany(CustomerDocumentRequest::class)->latest();
+    }
+
     public static function formatarCpf(string $cpf): string
     {
         $digits = preg_replace('/\D/', '', $cpf);

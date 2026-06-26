@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CustomerDocumentRequest;
 use App\Models\CustomerFile;
 use App\Models\DatajudProcesso;
 use App\Models\User;
+use App\Notifications\CustomerDocumentRequestNotification;
 use App\Services\ServiceContractService;
 use App\Rules\CepValido;
 use App\Rules\CpfOuCnpjValido;
@@ -16,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -105,6 +108,8 @@ class CustomerController extends Controller
         $customer->load([
             'files.processo',
             'files.uploader',
+            'documentRequests.processo',
+            'documentRequests.requester',
             'processos' => fn ($query) => $query->latest('updated_at'),
         ]);
 
@@ -262,6 +267,45 @@ class CustomerController extends Controller
         return back()->with('success', 'Arquivo removido.');
     }
 
+    public function storeDocumentRequest(Request $request, Customer $customer)
+    {
+        $actor = $request->user();
+
+        $this->ensureCustomerAccessible($actor, $customer);
+
+        $validated = $request->validate([
+            'datajud_processo_id' => ['nullable', 'integer', 'exists:datajud_processos,id'],
+            'document_type' => ['required', Rule::in(array_keys(CustomerFile::DOCUMENT_TYPES))],
+            'description' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'document_type.required' => 'Selecione o tipo do documento solicitado.',
+        ]);
+
+        $processo = $this->resolveUploadProcess($request, $customer, $actor);
+
+        $documentRequest = CustomerDocumentRequest::create([
+            'enterprise_id' => $customer->enterprise_id,
+            'customer_id' => $customer->id,
+            'datajud_processo_id' => $processo?->id,
+            'requested_by_user_id' => $actor->id,
+            'document_type' => $validated['document_type'],
+            'description' => $validated['description'] ?? null,
+            'status' => CustomerDocumentRequest::STATUS_PENDING,
+        ]);
+
+        $documentRequest->loadMissing(['customer.user', 'processo']);
+
+        $notified = $this->notifyCustomerDocumentRequest($documentRequest);
+
+        $message = $notified
+            ? 'Solicitacao registrada e cliente notificado por e-mail.'
+            : 'Solicitacao registrada, mas o cliente nao possui e-mail para notificacao.';
+
+        return redirect()
+            ->route('customers.show', $customer)
+            ->with('success', $message);
+    }
+
     public function uploadFiles(Request $request)
     {
         $user = $request->user();
@@ -282,9 +326,22 @@ class CustomerController extends Controller
             $request->input('description')
         );
 
+        $fulfilledRequests = $this->fulfillMatchingDocumentRequests(
+            $customer,
+            $processo,
+            $request->input('document_type') ?: 'other',
+            $user
+        );
+
         $message = $count === 1
             ? 'Arquivo enviado e vinculado ao seu cadastro.'
             : $count . ' arquivos enviados e vinculados ao seu cadastro.';
+
+        if ($fulfilledRequests > 0) {
+            $message .= ' ' . ($fulfilledRequests === 1
+                ? '1 solicitacao foi marcada como atendida.'
+                : $fulfilledRequests . ' solicitacoes foram marcadas como atendidas.');
+        }
 
         return back()->with('success', $message);
     }
@@ -675,5 +732,69 @@ class CustomerController extends Controller
         }
 
         return $count;
+    }
+
+    private function notifyCustomerDocumentRequest(CustomerDocumentRequest $documentRequest): bool
+    {
+        $customer = $documentRequest->customer;
+        $user = $customer?->user;
+        $email = $user?->email ?: $customer?->email;
+
+        if (! $email) {
+            return false;
+        }
+
+        $notification = new CustomerDocumentRequestNotification($documentRequest);
+
+        if ($user && $user->email) {
+            $user->notify($notification);
+        } else {
+            Notification::route('mail', $email)->notify($notification);
+        }
+
+        $documentRequest->forceFill(['notified_at' => now()])->save();
+
+        return true;
+    }
+
+    private function fulfillMatchingDocumentRequests(
+        Customer $customer,
+        ?DatajudProcesso $processo,
+        string $documentType,
+        User $actor
+    ): int
+    {
+        if (! $actor->isClient()) {
+            return 0;
+        }
+
+        $query = $customer->documentRequests()
+            ->pending()
+            ->where('document_type', $documentType);
+
+        if ($processo) {
+            $query->where(function (Builder $builder) use ($processo) {
+                $builder->whereNull('datajud_processo_id')
+                    ->orWhere('datajud_processo_id', $processo->id);
+            });
+        } else {
+            $query->whereNull('datajud_processo_id');
+        }
+
+        $requests = $query->get();
+
+        if ($requests->isEmpty()) {
+            return 0;
+        }
+
+        CustomerDocumentRequest::query()
+            ->whereKey($requests->pluck('id'))
+            ->update([
+                'status' => CustomerDocumentRequest::STATUS_FULFILLED,
+                'fulfilled_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        return $requests->count();
     }
 }

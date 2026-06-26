@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CustomerDocumentRequest;
 use App\Models\CustomerFile;
 use App\Models\DatajudProcesso;
 use App\Models\Document;
@@ -21,6 +22,8 @@ class DashboardController extends Controller
 
         $clientFiles = collect();
         $clientDocuments = collect();
+        $clientPendingDocumentRequests = collect();
+        $clientRecentDocumentRequests = collect();
         $clientProcesses = collect();
         $clientProcessOptions = collect();
         $fileChecklist = collect();
@@ -40,6 +43,19 @@ class DashboardController extends Controller
                     ->where('customer_id', $customer->id)
                     ->latest()
                     ->limit(6)
+                    ->get();
+                $clientPendingDocumentRequests = CustomerDocumentRequest::query()
+                    ->with(['processo', 'requester'])
+                    ->where('customer_id', $customer->id)
+                    ->pending()
+                    ->latest()
+                    ->get();
+                $clientRecentDocumentRequests = CustomerDocumentRequest::query()
+                    ->with('processo')
+                    ->where('customer_id', $customer->id)
+                    ->where('status', CustomerDocumentRequest::STATUS_FULFILLED)
+                    ->latest('fulfilled_at')
+                    ->limit(5)
                     ->get();
                 $clientProcessOptions = DatajudProcesso::query()
                     ->where('customer_id', $customer->id)
@@ -98,8 +114,10 @@ class DashboardController extends Controller
         return view('dashboard', compact(
             'clientDocuments',
             'clientFiles',
+            'clientPendingDocumentRequests',
             'clientProcessOptions',
             'clientProcesses',
+            'clientRecentDocumentRequests',
             'fileChecklist',
             'inviteEnterprise',
             'isClient',

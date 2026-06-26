@@ -116,6 +116,57 @@
         </div>
 
         <div class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div class="rounded-xl border border-amber-200 bg-white shadow-sm">
+                <div class="border-b border-amber-200 px-4 py-3 bg-amber-50/70">
+                    <h2 class="text-sm font-semibold text-gray-900">Documentos solicitados</h2>
+                    <p class="mt-1 text-xs text-gray-600">Pendencias abertas pelo escritorio para o seu cadastro ou para um processo especifico.</p>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    @forelse($clientPendingDocumentRequests as $requestItem)
+                        <div class="px-4 py-3">
+                            <p class="text-sm font-medium text-gray-900">{{ $requestItem->document_type_label }}</p>
+                            @if($requestItem->processo)
+                                <p class="mt-1 text-xs text-indigo-600">
+                                    Processo: {{ $requestItem->processo->numero_processo }}{{ $requestItem->processo->tribunal ? ' - ' . $requestItem->processo->tribunal : '' }}
+                                </p>
+                            @endif
+                            @if($requestItem->description)
+                                <p class="mt-2 text-sm text-gray-600">{{ $requestItem->description }}</p>
+                            @endif
+                            <p class="mt-2 text-xs text-gray-400">Solicitado em {{ $requestItem->created_at?->format('d/m/Y H:i') }}</p>
+                        </div>
+                    @empty
+                        <div class="px-4 py-6 text-sm text-gray-500">Nenhum documento pendente no momento.</div>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-200 px-4 py-3">
+                    <h2 class="text-sm font-semibold text-gray-900">Solicitacoes atendidas</h2>
+                    <p class="mt-1 text-xs text-gray-500">Ultimos pedidos de documentos que ja foram identificados como enviados.</p>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    @forelse($clientRecentDocumentRequests as $requestItem)
+                        <div class="px-4 py-3">
+                            <p class="text-sm font-medium text-gray-900">{{ $requestItem->document_type_label }}</p>
+                            @if($requestItem->processo)
+                                <p class="mt-1 text-xs text-indigo-600">
+                                    Processo: {{ $requestItem->processo->numero_processo }}{{ $requestItem->processo->tribunal ? ' - ' . $requestItem->processo->tribunal : '' }}
+                                </p>
+                            @endif
+                            <p class="mt-2 text-xs text-emerald-700">
+                                Atendido em {{ $requestItem->fulfilled_at?->format('d/m/Y H:i') ?: $requestItem->updated_at?->format('d/m/Y H:i') }}
+                            </p>
+                        </div>
+                    @empty
+                        <div class="px-4 py-6 text-sm text-gray-500">Nenhuma solicitacao atendida ainda.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
             <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
                 <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
                     <div>

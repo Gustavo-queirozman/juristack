@@ -5,6 +5,13 @@
 @section('content')
 @php
     $generalFiles = $customer->files->whereNull('datajud_processo_id')->sortByDesc('created_at')->values();
+    $pendingDocumentRequests = $customer->documentRequests
+        ->where('status', \App\Models\CustomerDocumentRequest::STATUS_PENDING)
+        ->values();
+    $completedDocumentRequests = $customer->documentRequests
+        ->where('status', \App\Models\CustomerDocumentRequest::STATUS_FULFILLED)
+        ->take(5)
+        ->values();
     $processFolders = $customer->processos->map(function ($processo) use ($customer) {
         return [
             'processo' => $processo,
@@ -88,6 +95,103 @@
                     </p>
                 @else
                     <p class="m-0 text-gray-500">Endereco nao informado.</p>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 mb-8 xl:grid-cols-[0.9fr_1.1fr]">
+        <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-sm font-semibold text-gray-900">Solicitar documento ao cliente</h3>
+                <p class="mt-1 text-xs text-gray-500">Crie uma pendencia geral do cliente ou vinculada a um processo e envie a notificacao por e-mail.</p>
+            </div>
+            <form method="POST" action="{{ route('customers.document-requests.store', $customer) }}" class="p-4 space-y-4">
+                @csrf
+                <div>
+                    <label for="request-process" class="block text-sm font-medium text-gray-700 mb-1">Processo</label>
+                    <select id="request-process" name="datajud_processo_id" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">Solicitacao geral do cliente</option>
+                        @foreach($customer->processos as $processo)
+                            <option value="{{ $processo->id }}" @selected((string) old('datajud_processo_id') === (string) $processo->id)>
+                                {{ $processo->numero_processo }}{{ $processo->tribunal ? ' - ' . $processo->tribunal : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('datajud_processo_id')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label for="request-document-type" class="block text-sm font-medium text-gray-700 mb-1">Documento solicitado</label>
+                    <select id="request-document-type" name="document_type" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">Selecione</option>
+                        @foreach(\App\Models\CustomerFile::DOCUMENT_TYPES as $key => $label)
+                            <option value="{{ $key }}" @selected(old('document_type') === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('document_type')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label for="request-description" class="block text-sm font-medium text-gray-700 mb-1">Orientacoes para o cliente</label>
+                    <textarea id="request-description" name="description" rows="4" class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex.: envie frente e verso, documento atualizado, anexar laudo assinado.">{{ old('description') }}</textarea>
+                    @error('description')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Solicitar e notificar cliente
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900">Solicitacoes de documentos</h3>
+                    <p class="mt-1 text-xs text-gray-500">Acompanhe o que ainda esta pendente e o que ja foi enviado pelo cliente.</p>
+                </div>
+                <span class="text-xs text-gray-500">{{ $customer->documentRequests->count() }} solicitacao(oes)</span>
+            </div>
+            <div class="divide-y divide-gray-100">
+                @forelse($pendingDocumentRequests as $requestItem)
+                    <div class="px-4 py-3">
+                        <p class="text-sm font-medium text-gray-900">{{ $requestItem->document_type_label }}</p>
+                        <p class="mt-1 text-xs text-amber-700">Pendente</p>
+                        @if($requestItem->processo)
+                            <p class="mt-1 text-xs text-indigo-600">
+                                Processo: {{ $requestItem->processo->numero_processo }}{{ $requestItem->processo->tribunal ? ' - ' . $requestItem->processo->tribunal : '' }}
+                            </p>
+                        @endif
+                        @if($requestItem->description)
+                            <p class="mt-2 text-sm text-gray-600">{{ $requestItem->description }}</p>
+                        @endif
+                        <p class="mt-2 text-xs text-gray-400">
+                            Solicitado em {{ $requestItem->created_at?->format('d/m/Y H:i') }}
+                            @if($requestItem->requester)
+                                por {{ $requestItem->requester->name }}
+                            @endif
+                        </p>
+                    </div>
+                @empty
+                    <div class="px-4 py-6 text-sm text-gray-500">Nenhuma solicitacao pendente no momento.</div>
+                @endforelse
+
+                @if($completedDocumentRequests->isNotEmpty())
+                    <div class="px-4 py-3 bg-emerald-50/60">
+                        <p class="text-xs font-semibold uppercase tracking-[0.08em] text-emerald-700">Atendidas recentemente</p>
+                    </div>
+                    @foreach($completedDocumentRequests as $requestItem)
+                        <div class="px-4 py-3">
+                            <p class="text-sm font-medium text-gray-900">{{ $requestItem->document_type_label }}</p>
+                            <p class="mt-1 text-xs text-emerald-700">
+                                Atendido em {{ $requestItem->fulfilled_at?->format('d/m/Y H:i') ?: $requestItem->updated_at?->format('d/m/Y H:i') }}
+                            </p>
+                            @if($requestItem->processo)
+                                <p class="mt-1 text-xs text-indigo-600">
+                                    Processo: {{ $requestItem->processo->numero_processo }}{{ $requestItem->processo->tribunal ? ' - ' . $requestItem->processo->tribunal : '' }}
+                                </p>
+                            @endif
+                        </div>
+                    @endforeach
                 @endif
             </div>
         </div>

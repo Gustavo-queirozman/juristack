@@ -75,4 +75,9 @@ class DatajudProcesso extends Model
     {
         return $this->hasMany(CustomerFile::class, 'datajud_processo_id');
     }
+
+    public function documentRequests(): HasMany
+    {
+        return $this->hasMany(CustomerDocumentRequest::class, 'datajud_processo_id');
+    }
 }
