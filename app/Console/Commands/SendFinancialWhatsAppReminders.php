@@ -62,11 +62,12 @@ class SendFinancialWhatsAppReminders extends Command
                     $entry->customer?->name ?? 'Sem cliente',
                     $entry->whatsappReminderUrl() ?? 'sem link'
                 ));
+
                 continue;
             }
 
             if (! $this->whatsAppReminderService->canSend()) {
-                $this->warn('Webhook do WhatsApp nao configurado em services.whatsapp.webhook_url.');
+                $this->warn('Evolution API nao configurada em services.evolution.');
 
                 return self::FAILURE;
             }

@@ -9,6 +9,7 @@ use App\Models\Document;
 use App\Models\Enterprise;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -220,5 +221,51 @@ class CustomerServiceContractTest extends TestCase
         ]);
 
         Mail::assertNothingSent();
+    }
+
+    public function test_service_contract_email_is_also_sent_via_whatsapp_when_evolution_is_configured(): void
+    {
+        Storage::fake('public');
+        Mail::fake();
+        Http::fake([
+            '*' => Http::response(['status' => 'ok'], 200),
+        ]);
+
+        config()->set('services.evolution.base_url', 'https://evolution.test');
+        config()->set('services.evolution.instance', 'juristack');
+        config()->set('services.evolution.api_key', 'secret');
+
+        $enterprise = Enterprise::create([
+            'name' => 'Atenas Advocacia',
+            'address' => 'Rua Central, 100, Belo Horizonte/MG',
+        ]);
+
+        $actor = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_ENTERPRISE_ADMIN,
+            'email' => 'admin@atenas.test',
+        ]);
+
+        $customer = Customer::create([
+            'enterprise_id' => $enterprise->id,
+            'name' => 'Mariana Dias',
+            'email' => 'mariana@example.com',
+            'mobile_phone' => '31988887777',
+            'city' => 'Belo Horizonte',
+        ]);
+
+        $response = $this->actingAs($actor)->post(route('customers.service-contract.send', $customer), [
+            'service_contract_signer_type' => 'enterprise',
+            'service_contract_subject' => 'consulta e acompanhamento juridico',
+            'service_contract_city' => 'Belo Horizonte',
+        ]);
+
+        $response->assertRedirect(route('customers.show', $customer));
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://evolution.test/message/sendText/juristack'
+                && $request['number'] === '5531988887777'
+                && str_contains($request['text'], 'contrato de prestacao de servicos');
+        });
     }
 }

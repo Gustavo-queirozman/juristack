@@ -8,11 +8,11 @@ use App\Models\CustomerFile;
 use App\Models\DatajudProcesso;
 use App\Models\User;
 use App\Notifications\CustomerDocumentRequestNotification;
-use App\Services\ServiceContractService;
 use App\Rules\CepValido;
 use App\Rules\CpfOuCnpjValido;
 use App\Rules\RgValido;
 use App\Rules\TelefoneCelularValido;
+use App\Services\ServiceContractService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +31,7 @@ class CustomerController extends Controller
 
         $busca = $request->get('busca');
         if ($busca !== null && $busca !== '') {
-            $term = '%' . trim($busca) . '%';
+            $term = '%'.trim($busca).'%';
             $query->where(function ($q) use ($term) {
                 $q->where('name', 'like', $term)
                     ->orWhere('email', 'like', $term)
@@ -194,7 +194,7 @@ class CustomerController extends Controller
 
         $msg = $count === 1
             ? 'Arquivo enviado e vinculado ao cliente.'
-            : $count . ' arquivos enviados e vinculados ao cliente.';
+            : $count.' arquivos enviados e vinculados ao cliente.';
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -233,7 +233,7 @@ class CustomerController extends Controller
         if ($raw) {
             return response()->file($path, [
                 'Content-Type' => $mime,
-                'Content-Disposition' => 'inline; filename="' . addslashes($name) . '"',
+                'Content-Disposition' => 'inline; filename="'.addslashes($name).'"',
             ]);
         }
 
@@ -242,22 +242,22 @@ class CustomerController extends Controller
             $routeName = $request->user()?->isClient()
                 ? 'client.files.download'
                 : 'customers.files.download';
-            $urlImage = route($routeName, $request->user()?->isClient() ? $file : [$customer, $file]) . '?raw=1';
-            $urlDownload = route($routeName, $request->user()?->isClient() ? $file : [$customer, $file]) . '?download=1';
+            $urlImage = route($routeName, $request->user()?->isClient() ? $file : [$customer, $file]).'?raw=1';
+            $urlDownload = route($routeName, $request->user()?->isClient() ? $file : [$customer, $file]).'?download=1';
 
-            $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' . e($name) . '</title>';
+            $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'.e($name).'</title>';
             $html .= '<style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#1a1a1a;gap:1rem;padding:1rem;}';
             $html .= 'img{max-width:100%;max-height:85vh;object-fit:contain;}';
             $html .= 'a{color:#6366f1;text-decoration:none;font-family:sans-serif;font-size:0.875rem;} a:hover{text-decoration:underline;}</style></head><body>';
-            $html .= '<img src="' . e($urlImage) . '" alt="' . e($name) . '">';
-            $html .= '<a href="' . e($urlDownload) . '" download>Baixar arquivo</a></body></html>';
+            $html .= '<img src="'.e($urlImage).'" alt="'.e($name).'">';
+            $html .= '<a href="'.e($urlDownload).'" download>Baixar arquivo</a></body></html>';
 
             return response($html)->header('Content-Type', 'text/html; charset=utf-8');
         }
 
         return response()->file($path, [
             'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . addslashes($name) . '"',
+            'Content-Disposition' => 'inline; filename="'.addslashes($name).'"',
         ]);
     }
 
@@ -387,12 +387,12 @@ class CustomerController extends Controller
 
         $message = $count === 1
             ? 'Arquivo enviado e vinculado ao seu cadastro.'
-            : $count . ' arquivos enviados e vinculados ao seu cadastro.';
+            : $count.' arquivos enviados e vinculados ao seu cadastro.';
 
         if ($fulfilledRequests > 0) {
-            $message .= ' ' . ($fulfilledRequests === 1
+            $message .= ' '.($fulfilledRequests === 1
                 ? '1 solicitacao foi marcada como atendida.'
-                : $fulfilledRequests . ' solicitacoes foram marcadas como atendidas.');
+                : $fulfilledRequests.' solicitacoes foram marcadas como atendidas.');
         }
 
         return back()->with('success', $message);
@@ -434,7 +434,7 @@ class CustomerController extends Controller
             'phone' => ['nullable', 'string', 'max:20', new TelefoneCelularValido],
             'phone_2' => ['nullable', 'string', 'max:20', new TelefoneCelularValido],
             'zip_code' => ['nullable', 'string', 'max:20', new CepValido],
-            'state' => ['nullable', 'string', 'max:2', 'in:' . implode(',', $estados)],
+            'state' => ['nullable', 'string', 'max:2', 'in:'.implode(',', $estados)],
             'city' => 'nullable|string|max:100',
             'neighborhood' => 'nullable|string|max:100',
             'street' => 'nullable|string|max:255',
@@ -537,6 +537,7 @@ class CustomerController extends Controller
 
         if ($user->isClient()) {
             abort_unless((int) $user->customerProfile?->id === (int) $customer->id, 403);
+
             return;
         }
 
@@ -684,6 +685,7 @@ class CustomerController extends Controller
 
         if ($customer->user) {
             $customer->user->update($attributes);
+
             return;
         }
 
@@ -761,12 +763,11 @@ class CustomerController extends Controller
         ?DatajudProcesso $processo,
         ?string $documentType,
         ?string $description
-    ): int
-    {
+    ): int {
         $count = 0;
         $baseDirectory = $processo
-            ? 'customers/' . $customer->id . '/processos/' . $processo->id
-            : 'customers/' . $customer->id . '/geral';
+            ? 'customers/'.$customer->id.'/processos/'.$processo->id
+            : 'customers/'.$customer->id.'/geral';
 
         foreach ($uploadedFiles as $uploaded) {
             $storedPath = $uploaded->store($baseDirectory, 'public');
@@ -794,8 +795,9 @@ class CustomerController extends Controller
         $customer = $documentRequest->customer;
         $user = $customer?->user;
         $email = $user?->email ?: $customer?->email;
+        $phone = $customer?->mobile_phone ?: $customer?->phone;
 
-        if (! $email) {
+        if (! $email && ! $phone) {
             return false;
         }
 
@@ -804,7 +806,15 @@ class CustomerController extends Controller
         if ($user && $user->email) {
             $user->notify($notification);
         } else {
-            Notification::route('mail', $email)->notify($notification);
+            $anonymousNotification = $email
+                ? Notification::route('mail', $email)
+                : Notification::route('whatsapp', $phone);
+
+            if ($email && $phone) {
+                $anonymousNotification->route('whatsapp', $phone);
+            }
+
+            $anonymousNotification->notify($notification);
         }
 
         $documentRequest->forceFill(['notified_at' => now()])->save();
@@ -817,8 +827,7 @@ class CustomerController extends Controller
         ?DatajudProcesso $processo,
         string $documentType,
         User $actor
-    ): int
-    {
+    ): int {
         if (! $actor->isClient()) {
             return 0;
         }

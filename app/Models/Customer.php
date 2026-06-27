@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Notifications\Notification;
 
 class Customer extends Model
 {
@@ -85,12 +86,19 @@ class Customer extends Model
     public static function formatarCpf(string $cpf): string
     {
         $digits = preg_replace('/\D/', '', $cpf);
+
         return preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $digits);
     }
 
     public static function formatarCnpj(string $cnpj): string
     {
         $digits = preg_replace('/\D/', '', $cnpj);
+
         return preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $digits);
+    }
+
+    public function routeNotificationForWhatsApp(?Notification $notification = null): ?string
+    {
+        return $this->mobile_phone ?: $this->phone;
     }
 }

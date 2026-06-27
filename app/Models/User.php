@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\Auth\VerifyEmailNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,14 +11,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\Notification;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
     public const ROLE_ADMIN = 'admin';
+
     public const ROLE_ENTERPRISE_ADMIN = 'enterprise_admin';
+
     public const ROLE_LAWYER = 'lawyer';
+
     public const ROLE_CLIENT = 'client';
 
     public const ROLES = [
@@ -111,5 +117,22 @@ class User extends Authenticatable
     public static function internalRoleLabels(): array
     {
         return array_intersect_key(self::roleLabels(), array_flip(self::INTERNAL_ROLES));
+    }
+
+    public function routeNotificationForWhatsApp(?Notification $notification = null): ?string
+    {
+        return $this->customerProfile?->mobile_phone
+            ?: $this->customerProfile?->phone
+            ?: $this->enterprise?->phone;
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification);
     }
 }

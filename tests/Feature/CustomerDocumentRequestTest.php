@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\CustomerDocumentRequestNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -160,5 +161,47 @@ class CustomerDocumentRequestTest extends TestCase
         ]);
 
         $this->assertNotNull($documentRequest->fresh()->fulfilled_at);
+    }
+
+    public function test_customer_document_request_notification_is_also_sent_via_whatsapp(): void
+    {
+        Http::fake([
+            '*' => Http::response(['status' => 'ok'], 200),
+        ]);
+
+        config()->set('services.evolution.base_url', 'https://evolution.test');
+        config()->set('services.evolution.instance', 'juristack');
+        config()->set('services.evolution.api_key', 'secret');
+
+        $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
+        $clientUser = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_CLIENT,
+            'name' => 'Maria da Silva',
+        ]);
+        $customer = Customer::create([
+            'user_id' => $clientUser->id,
+            'enterprise_id' => $enterprise->id,
+            'name' => 'Maria da Silva',
+            'email' => $clientUser->email,
+            'mobile_phone' => '31999990000',
+        ]);
+        $documentRequest = CustomerDocumentRequest::create([
+            'enterprise_id' => $enterprise->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $clientUser->id,
+            'document_type' => 'cpf',
+            'description' => 'Envie o CPF em PDF.',
+            'status' => CustomerDocumentRequest::STATUS_PENDING,
+        ]);
+
+        Notification::sendNow($clientUser, new CustomerDocumentRequestNotification($documentRequest));
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://evolution.test/message/sendText/juristack'
+                && $request->hasHeader('apikey', 'secret')
+                && $request['number'] === '5531999990000'
+                && str_contains($request['text'], 'Documento solicitado: CPF');
+        });
     }
 }

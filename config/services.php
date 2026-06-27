@@ -45,4 +45,10 @@ return [
         'token' => env('WHATSAPP_WEBHOOK_TOKEN'),
     ],
 
+    'evolution' => [
+        'base_url' => env('EVOLUTION_API_BASE_URL'),
+        'instance' => env('EVOLUTION_API_INSTANCE'),
+        'api_key' => env('EVOLUTION_API_KEY'),
+    ],
+
 ];
