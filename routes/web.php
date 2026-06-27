@@ -72,8 +72,11 @@ Route::middleware(['auth', 'role:admin,enterprise_admin,lawyer'])->group(functio
         Route::get('/', [FinancialEntryController::class, 'index'])->name('index');
         Route::get('/create', [FinancialEntryController::class, 'create'])->name('create');
         Route::post('/', [FinancialEntryController::class, 'store'])->name('store');
+        Route::post('/import-bank-file', [FinancialEntryController::class, 'importBankFile'])->name('import-bank-file');
         Route::get('/{financialEntry}/edit', [FinancialEntryController::class, 'edit'])->name('edit');
         Route::put('/{financialEntry}', [FinancialEntryController::class, 'update'])->name('update');
+        Route::post('/{financialEntry}/payments', [FinancialEntryController::class, 'storePayment'])->name('payments.store');
+        Route::post('/{financialEntry}/whatsapp-reminder', [FinancialEntryController::class, 'sendWhatsAppReminder'])->name('whatsapp-reminder');
         Route::delete('/{financialEntry}', [FinancialEntryController::class, 'destroy'])->name('destroy');
     });
 });

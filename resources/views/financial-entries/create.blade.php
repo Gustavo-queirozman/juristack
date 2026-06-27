@@ -3,9 +3,9 @@
 @section('pageTitle', 'Novo lancamento financeiro')
 
 @section('content')
-<div class="max-w-3xl">
+<div class="max-w-4xl">
     <p class="text-gray-600 text-sm mb-6">
-        Cadastre uma conta a pagar ou a receber com data, valor e forma de pagamento.
+        Cadastre contas a pagar e a receber com cliente, vencimento, forma de pagamento e observacoes.
     </p>
 
     <form method="POST" action="{{ route('financial-entries.store') }}" class="space-y-6">

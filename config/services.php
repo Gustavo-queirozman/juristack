@@ -40,4 +40,9 @@ return [
         'base_url' => env('DATAJUD_BASE_URL', 'https://api-publica.datajud.cnj.jus.br'),
     ],
 
+    'whatsapp' => [
+        'webhook_url' => env('WHATSAPP_WEBHOOK_URL'),
+        'token' => env('WHATSAPP_WEBHOOK_TOKEN'),
+    ],
+
 ];
