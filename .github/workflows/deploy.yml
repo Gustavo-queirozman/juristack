@@ -17,6 +17,8 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            set -e
+
             cd ${{ secrets.PROJECT_PATH }}
 
             git pull origin main
@@ -40,5 +42,16 @@ jobs:
             sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
             sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
 
-            sudo systemctl restart php8.3-fpm
+            PHP_FPM_SERVICE=$(systemctl list-units --type=service --all | grep -o 'php[0-9.]*-fpm.service' | head -n 1)
+
+            if [ -z "$PHP_FPM_SERVICE" ]; then
+              echo "Nenhum serviço PHP-FPM encontrado."
+              systemctl list-units --type=service --all | grep php || true
+              exit 1
+            fi
+
+            echo "Reiniciando $PHP_FPM_SERVICE"
+            sudo systemctl restart "$PHP_FPM_SERVICE"
+
+            sudo nginx -t
             sudo systemctl reload nginx
