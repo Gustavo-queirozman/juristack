@@ -10,6 +10,7 @@ use App\Http\Controllers\FinancialEntryController;
 use App\Http\Controllers\OfficeAccessController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\WhatsAppConnectionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'role:admin,enterprise_admin,lawyer'])->group(function () {
@@ -88,6 +89,13 @@ Route::middleware(['auth', 'role:admin,enterprise_admin'])->prefix('acessos-escr
     Route::get('/{user}/edit', [OfficeAccessController::class, 'edit'])->name('edit');
     Route::put('/{user}', [OfficeAccessController::class, 'update'])->name('update');
     Route::delete('/{user}', [OfficeAccessController::class, 'destroy'])->name('destroy');
+});
+
+Route::middleware(['auth', 'role:admin,enterprise_admin'])->prefix('whatsapp')->name('whatsapp.')->group(function () {
+    Route::get('/conexao', [WhatsAppConnectionController::class, 'show'])->name('connection.show');
+    Route::post('/conexao/conectar', [WhatsAppConnectionController::class, 'connect'])->name('connection.connect');
+    Route::post('/conexao/atualizar', [WhatsAppConnectionController::class, 'refresh'])->name('connection.refresh');
+    Route::delete('/conexao/desconectar', [WhatsAppConnectionController::class, 'disconnect'])->name('connection.disconnect');
 });
 
 Route::middleware(['auth', 'role:client'])->group(function () {

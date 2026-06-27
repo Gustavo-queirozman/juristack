@@ -20,9 +20,22 @@ class Enterprise extends Model
         'email',
         'phone',
         'address',
+        'evolution_instance',
+        'whatsapp_connection_status',
+        'whatsapp_qr_code',
+        'whatsapp_connected_at',
+        'whatsapp_disconnected_at',
     ];
 
     public $timestamps = true;
+
+    protected function casts(): array
+    {
+        return [
+            'whatsapp_connected_at' => 'datetime',
+            'whatsapp_disconnected_at' => 'datetime',
+        ];
+    }
 
     protected static function booted(): void
     {
@@ -65,7 +78,7 @@ class Enterprise extends Model
             ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))
             ->where('slug', $slug)
             ->exists()) {
-            $slug = $baseSlug . '-' . $suffix;
+            $slug = $baseSlug.'-'.$suffix;
             $suffix++;
         }
 
