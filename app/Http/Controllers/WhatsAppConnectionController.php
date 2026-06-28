@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Enterprise;
 use App\Services\EvolutionWhatsAppService;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -86,7 +88,7 @@ class WhatsAppConnectionController extends Controller
             report($exception);
 
             return back()->withErrors([
-                'whatsapp' => 'Nao foi possivel iniciar a conexao com a Evolution API. Verifique a URL, a chave e tente novamente.',
+                'whatsapp' => $this->evolutionErrorMessage($exception),
             ]);
         }
 
@@ -229,6 +231,24 @@ class WhatsAppConnectionController extends Controller
             'qrcode' => 'Aguardando QR Code',
             'disconnected' => 'Desconectado',
         ];
+    }
+
+    private function evolutionErrorMessage(Throwable $exception): string
+    {
+        if ($exception instanceof RequestException && $exception->response) {
+            $status = $exception->response->status();
+            $body = Str::limit(trim($exception->response->body()), 300);
+
+            return 'Nao foi possivel iniciar a conexao com a Evolution API. '
+                ."A Evolution respondeu HTTP {$status}"
+                .($body !== '' ? ": {$body}" : '.');
+        }
+
+        if ($exception instanceof ConnectionException) {
+            return 'Nao foi possivel conectar na Evolution API. Verifique se o container esta rodando e se EVOLUTION_API_BASE_URL aponta para uma URL publica acessivel.';
+        }
+
+        return 'Nao foi possivel iniciar a conexao com a Evolution API: '.$exception->getMessage();
     }
 
     private function routeParameters(Request $request, ?Enterprise $enterprise): array
