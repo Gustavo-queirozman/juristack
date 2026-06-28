@@ -50,10 +50,13 @@ class WhatsAppConnectionTest extends TestCase
             'https://evolution.test/instance/connectionState/*' => Http::response([
                 'instance' => ['state' => 'connecting'],
             ], 200),
+            'https://evolution.test/webhook/set/*' => Http::response([], 200),
         ]);
 
         config()->set('services.evolution.base_url', 'https://evolution.test');
         config()->set('services.evolution.api_key', 'secret');
+        config()->set('services.whatsapp.token', 'webhook-secret');
+        config()->set('services.whatsapp.webhook_url', 'https://app.test/api/whatsapp/webhook');
 
         $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
         $admin = User::factory()->create([
@@ -76,6 +79,13 @@ class WhatsAppConnectionTest extends TestCase
                 && $request->hasHeader('apikey', 'secret')
                 && $request['instanceName'] === 'juristack-empresa-teste-'.$enterprise->id
                 && $request['qrcode'] === true;
+        });
+
+        Http::assertSent(function ($request) use ($enterprise): bool {
+            return $request->url() === 'https://evolution.test/webhook/set/juristack-empresa-teste-'.$enterprise->id
+                && $request['enabled'] === true
+                && $request['url'] === 'https://app.test/api/whatsapp/webhook?token=webhook-secret'
+                && $request['events'] === ['MESSAGES_UPSERT'];
         });
     }
 }

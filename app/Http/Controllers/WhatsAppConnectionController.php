@@ -39,6 +39,7 @@ class WhatsAppConnectionController extends Controller
             'enterprises' => $enterprises,
             'selectedEnterpriseId' => $enterprise?->id,
             'isEvolutionConfigured' => $this->whatsAppService->hasBaseConfiguration(),
+            'isWebhookConfigured' => $this->whatsAppService->hasWebhookConfiguration(),
             'connection' => $connection,
             'statusError' => $statusError,
             'statusLabels' => $this->statusLabels(),
@@ -78,6 +79,9 @@ class WhatsAppConnectionController extends Controller
             ])->save();
 
             $this->syncEnterpriseConnection($enterprise, $connection);
+            $webhookConfigured = $this->whatsAppService->configureWebhookSafely($instance, [
+                'enterprise_id' => $enterprise->id,
+            ]);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -86,9 +90,13 @@ class WhatsAppConnectionController extends Controller
             ]);
         }
 
+        $message = $webhookConfigured
+            ? 'Conexao iniciada. Escaneie o QR Code com o WhatsApp do escritorio. O webhook do chatbot foi cadastrado na Evolution.'
+            : 'Conexao iniciada. Escaneie o QR Code com o WhatsApp do escritorio. Confira a configuracao do webhook do chatbot.';
+
         return redirect()
             ->route('whatsapp.connection.show', $this->routeParameters($request, $enterprise))
-            ->with('success', 'Conexao iniciada. Escaneie o QR Code com o WhatsApp do escritorio.');
+            ->with('success', $message);
     }
 
     public function refresh(Request $request)

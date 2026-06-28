@@ -7,6 +7,7 @@
     $status = $enterprise?->whatsapp_connection_status;
     $statusLabel = $statusLabels[$status] ?? ($status ? ucfirst($status) : 'Nao configurado');
     $isConnected = in_array($status, ['connected', 'open'], true);
+    $webhookUrl = config('services.whatsapp.webhook_url') ?: url('/api/whatsapp/webhook');
 @endphp
 
 <div class="w-full max-w-5xl">
@@ -86,6 +87,12 @@
                         </div>
                     @endunless
 
+                    @unless($isWebhookConfigured)
+                        <div class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            Configure WHATSAPP_WEBHOOK_TOKEN para ativar o chatbot com seguranca.
+                        </div>
+                    @endunless
+
                     <div class="mt-4 flex flex-wrap gap-2">
                         <form method="POST" action="{{ route('whatsapp.connection.connect', ['enterprise_id' => $enterprise->id]) }}">
                             @csrf
@@ -143,6 +150,12 @@
                         <p class="mt-1 text-lg font-semibold tracking-wider text-gray-900">{{ $connection['pairing_code'] }}</p>
                     </div>
                 @endif
+
+                <div class="mt-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+                    <p class="text-xs font-semibold uppercase text-gray-500">Webhook do chatbot</p>
+                    <p class="mt-1 break-all text-sm font-medium text-gray-900">{{ $webhookUrl }}</p>
+                    <p class="mt-2 text-xs text-gray-500">A conexao cadastra automaticamente esta URL na Evolution para mensagens recebidas. O token configurado em WHATSAPP_WEBHOOK_TOKEN e enviado junto na URL cadastrada.</p>
+                </div>
             </aside>
         </div>
     @endif

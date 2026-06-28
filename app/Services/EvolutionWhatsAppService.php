@@ -17,6 +17,11 @@ class EvolutionWhatsAppService
         return $this->hasBaseConfiguration() && $this->instance($instance) !== '';
     }
 
+    public function hasWebhookConfiguration(): bool
+    {
+        return $this->webhookUrl() !== '' && $this->webhookToken() !== '';
+    }
+
     public function canSendTo(?string $phone): bool
     {
         return $this->normalizePhone($phone) !== null;
@@ -38,10 +43,10 @@ class EvolutionWhatsAppService
         return true;
     }
 
-    public function sendTextSafely(?string $phone, string $message, array $context = []): bool
+    public function sendTextSafely(?string $phone, string $message, array $context = [], ?string $instance = null): bool
     {
         try {
-            return $this->sendText($phone, $message);
+            return $this->sendText($phone, $message, $instance);
         } catch (\Throwable $exception) {
             Log::warning('Falha ao enviar notificacao via WhatsApp.', [
                 'phone' => $this->normalizePhone($phone),
@@ -122,6 +127,42 @@ class EvolutionWhatsAppService
         return $this->normalizeConnectionPayload($payload);
     }
 
+    public function configureWebhook(?string $instance = null): bool
+    {
+        if (! $this->isConfigured($instance) || ! $this->hasWebhookConfiguration()) {
+            return false;
+        }
+
+        $this->request()->post($this->endpoint('/webhook/set/'.$this->instance($instance)), [
+            'enabled' => true,
+            'url' => $this->webhookCallbackUrl(),
+            'webhook_by_events' => false,
+            'webhook_base64' => false,
+            'webhookByEvents' => false,
+            'webhookBase64' => false,
+            'events' => [
+                'MESSAGES_UPSERT',
+            ],
+        ])->throw();
+
+        return true;
+    }
+
+    public function configureWebhookSafely(?string $instance = null, array $context = []): bool
+    {
+        try {
+            return $this->configureWebhook($instance);
+        } catch (\Throwable $exception) {
+            Log::warning('Falha ao configurar webhook do WhatsApp.', [
+                'instance' => $this->instance($instance),
+                'error' => $exception->getMessage(),
+                'context' => $context,
+            ]);
+
+            return false;
+        }
+    }
+
     public function normalizeConnectionPayload(array $payload): array
     {
         $state = data_get($payload, 'instance.state')
@@ -145,6 +186,28 @@ class EvolutionWhatsAppService
     private function instance(?string $instance = null): string
     {
         return trim((string) ($instance ?: config('services.evolution.instance', '')));
+    }
+
+    private function webhookUrl(): string
+    {
+        return trim((string) (config('services.whatsapp.webhook_url') ?: url('/api/whatsapp/webhook')));
+    }
+
+    private function webhookToken(): string
+    {
+        return trim((string) config('services.whatsapp.token', ''));
+    }
+
+    private function webhookCallbackUrl(): string
+    {
+        $url = $this->webhookUrl();
+        $token = $this->webhookToken();
+
+        if ($url === '' || $token === '' || str_contains($url, 'token=')) {
+            return $url;
+        }
+
+        return $url.(str_contains($url, '?') ? '&' : '?').'token='.urlencode($token);
     }
 
     private function messageEndpoint(?string $instance = null): string

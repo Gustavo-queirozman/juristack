@@ -87,7 +87,8 @@ class ServiceContractService
                 'customer_id' => $customer->id,
                 'document_id' => $document->id,
                 'type' => 'service-contract',
-            ]
+            ],
+            $customer->enterprise?->evolution_instance
         );
 
         return $document;

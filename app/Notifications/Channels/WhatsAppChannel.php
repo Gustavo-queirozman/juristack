@@ -24,9 +24,22 @@ class WhatsAppChannel
             return;
         }
 
+        $instance = $this->resolveInstance($notifiable);
+
+        if (! $this->whatsAppService->isConfigured($instance)) {
+            return;
+        }
+
         $this->whatsAppService->sendTextSafely($route, $message->content, [
             'notification' => $notification::class,
             'notifiable' => $notifiable::class,
-        ]);
+        ], $instance);
+    }
+
+    private function resolveInstance(object $notifiable): ?string
+    {
+        return data_get($notifiable, 'enterprise.evolution_instance')
+            ?: data_get($notifiable, 'customerProfile.enterprise.evolution_instance')
+            ?: data_get($notifiable, 'evolution_instance');
     }
 }

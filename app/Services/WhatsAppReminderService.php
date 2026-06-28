@@ -17,13 +17,17 @@ class WhatsAppReminderService
 
     public function send(FinancialEntry $entry): bool
     {
-        $phone = $entry->customer?->mobile_phone ?: $entry->customer?->phone;
+        $entry->loadMissing('customer.enterprise');
 
-        if (! $this->evolutionWhatsAppService->canSendTo($phone) || ! $this->canSend()) {
+        $phone = $entry->customer?->mobile_phone ?: $entry->customer?->phone;
+        $instance = $entry->customer?->enterprise?->evolution_instance;
+
+        if (! $this->evolutionWhatsAppService->canSendTo($phone)
+            || ! $this->evolutionWhatsAppService->isConfigured($instance)) {
             return false;
         }
 
-        $this->evolutionWhatsAppService->sendText($phone, $entry->whatsappReminderMessage());
+        $this->evolutionWhatsAppService->sendText($phone, $entry->whatsappReminderMessage(), $instance);
 
         $entry->forceFill([
             'last_whatsapp_reminder_at' => now(),
