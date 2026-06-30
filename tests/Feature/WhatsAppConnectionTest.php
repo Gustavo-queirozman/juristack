@@ -88,4 +88,70 @@ class WhatsAppConnectionTest extends TestCase
                 && $request['events'] === ['MESSAGES_UPSERT'];
         });
     }
+
+    public function test_connect_strips_manager_suffix_from_evolution_base_url(): void
+    {
+        Http::fake([
+            'https://evolution.test/instance/create' => Http::response([
+                'instance' => ['state' => 'connecting'],
+                'base64' => str_repeat('a', 240),
+            ], 200),
+            'https://evolution.test/instance/connectionState/*' => Http::response([
+                'instance' => ['state' => 'connecting'],
+            ], 200),
+            'https://evolution.test/webhook/set/*' => Http::response([], 200),
+        ]);
+
+        config()->set('services.evolution.base_url', 'https://evolution.test/manager');
+        config()->set('services.evolution.api_key', 'secret');
+        config()->set('services.whatsapp.token', 'webhook-secret');
+        config()->set('services.whatsapp.webhook_url', 'https://app.test/api/whatsapp/webhook');
+
+        $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
+        $admin = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_ENTERPRISE_ADMIN,
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('whatsapp.connection.connect'));
+
+        $response->assertRedirect(route('whatsapp.connection.show'));
+        $response->assertSessionHas('success');
+
+        Http::assertSent(function ($request): bool {
+            return $request->url() === 'https://evolution.test/instance/create';
+        });
+    }
+
+    public function test_connect_returns_specific_message_when_base_url_points_to_laravel_app(): void
+    {
+        Http::fake([
+            '*' => Http::response([
+                'message' => 'The route instance/create could not be found.',
+                'exception' => 'Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException',
+                'file' => '/var/www/streaming/backend/vendor/laravel/framework/src/Illuminate/Routing/AbstractRouteCollection.php',
+            ], 404),
+        ]);
+
+        config()->set('services.evolution.base_url', 'https://streaming.example.com');
+        config()->set('services.evolution.api_key', 'secret');
+
+        $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
+        $admin = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_ENTERPRISE_ADMIN,
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('whatsapp.connection.connect'));
+
+        $response->assertSessionHasErrors('whatsapp');
+        $this->assertStringContainsString(
+            'EVOLUTION_API_BASE_URL parece apontar para outro sistema',
+            session('errors')->first('whatsapp')
+        );
+        $this->assertStringContainsString(
+            'sem sufixos como /manager ou /manager/login',
+            session('errors')->first('whatsapp')
+        );
+    }
 }

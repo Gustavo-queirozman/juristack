@@ -180,7 +180,15 @@ class EvolutionWhatsAppService
 
     private function baseUrl(): string
     {
-        return rtrim((string) config('services.evolution.base_url', ''), '/');
+        $url = trim((string) config('services.evolution.base_url', ''));
+
+        if ($url === '') {
+            return '';
+        }
+
+        $url = rtrim($url, '/');
+
+        return preg_replace('#/manager(?:/login)?$#i', '', $url) ?: $url;
     }
 
     private function instance(?string $instance = null): string

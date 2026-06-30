@@ -239,6 +239,13 @@ class WhatsAppConnectionController extends Controller
             $status = $exception->response->status();
             $body = Str::limit(trim($exception->response->body()), 300);
 
+            if ($status === 404 && $this->looksLikeWrongEvolutionBaseUrl($body)) {
+                return 'Nao foi possivel iniciar a conexao com a Evolution API. '
+                    .'O EVOLUTION_API_BASE_URL parece apontar para outro sistema, e nao para a API da Evolution. '
+                    .'Use a URL base publica da Evolution, sem sufixos como /manager ou /manager/login, e depois limpe o cache de configuracao.'
+                    .($body !== '' ? " Resposta HTTP 404: {$body}" : '');
+            }
+
             return 'Nao foi possivel iniciar a conexao com a Evolution API. '
                 ."A Evolution respondeu HTTP {$status}"
                 .($body !== '' ? ": {$body}" : '.');
@@ -258,5 +265,15 @@ class WhatsAppConnectionController extends Controller
         }
 
         return ['enterprise_id' => $enterprise->id];
+    }
+
+    private function looksLikeWrongEvolutionBaseUrl(string $body): bool
+    {
+        $normalized = strtolower($body);
+
+        return str_contains($normalized, 'the route instance/create could not be found')
+            || str_contains($normalized, 'abstractroutecollection.php')
+            || str_contains($normalized, 'laravel/framework')
+            || str_contains($normalized, 'nfoundhttpexception');
     }
 }
