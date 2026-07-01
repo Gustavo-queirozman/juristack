@@ -9,17 +9,17 @@ use Illuminate\Support\Facades\Hash;
 class UserSeeder extends Seeder
 {
     /**
-     * Usuário para login em desenvolvimento.
-     * Email: admin@juristack.local
-     * Senha: password
+     * Usuario administrador raiz.
+     * Email: admin@juristack.com.br
+     * Senha: 12345678
      */
     public function run(): void
     {
         User::updateOrCreate(
-            ['email' => 'admin@juristack.local'],
+            ['email' => 'admin@juristack.com.br'],
             [
-                'name' => 'Admin JuriStack',
-                'password' => Hash::make('password'),
+                'name' => 'Administrador JuriStack',
+                'password' => Hash::make('12345678'),
                 'email_verified_at' => now(),
                 'role' => User::ROLE_ADMIN,
                 'is_active' => true,

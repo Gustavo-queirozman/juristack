@@ -12,6 +12,7 @@
     $isWhatsAppConnection = request()->routeIs('whatsapp.*');
     $isCustomers = request()->routeIs('customers.*');
     $isOfficeAccess = request()->routeIs('office-access.*');
+    $isAdminPanel = request()->routeIs('admin.*');
     $isProfile = request()->routeIs('profile.edit');
     $canManageOfficeAccess = $user && in_array($user->role, [\App\Models\User::ROLE_ADMIN, \App\Models\User::ROLE_ENTERPRISE_ADMIN], true);
 @endphp
@@ -32,6 +33,17 @@
             </span>
             <span>Dashboard</span>
         </a>
+        @if($user?->isAdmin())
+        <div class="sidebar-group">
+            <span class="sidebar-group-title">Administrador global</span>
+            <a href="{{ route('admin.dashboard') }}" class="sidebar-link {{ $isAdminPanel ? 'sidebar-link-active' : '' }}">
+                <span class="sidebar-link-icon" aria-hidden="true">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M6 3h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2zm3 8h6m-6 4h6"/></svg>
+                </span>
+                <span>Painel administrativo</span>
+            </a>
+        </div>
+        @endif
         @unless($isClientUser)
         <div class="sidebar-group">
             <span class="sidebar-group-title">DataJud</span>

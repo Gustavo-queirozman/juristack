@@ -7,6 +7,8 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FinancialEntryController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\EnterpriseController as AdminEnterpriseController;
 use App\Http\Controllers\OfficeAccessController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TaskController;
@@ -96,6 +98,18 @@ Route::middleware(['auth', 'role:admin,enterprise_admin'])->prefix('whatsapp')->
     Route::post('/conexao/conectar', [WhatsAppConnectionController::class, 'connect'])->name('connection.connect');
     Route::post('/conexao/atualizar', [WhatsAppConnectionController::class, 'refresh'])->name('connection.refresh');
     Route::delete('/conexao/desconectar', [WhatsAppConnectionController::class, 'disconnect'])->name('connection.disconnect');
+});
+
+Route::middleware(['auth', 'role:admin'])->prefix('painel-administrativo')->name('admin.')->group(function () {
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::prefix('escritorios')->name('enterprises.')->group(function () {
+        Route::get('/', [AdminEnterpriseController::class, 'index'])->name('index');
+        Route::get('/create', [AdminEnterpriseController::class, 'create'])->name('create');
+        Route::post('/', [AdminEnterpriseController::class, 'store'])->name('store');
+        Route::get('/{enterprise}/edit', [AdminEnterpriseController::class, 'edit'])->name('edit');
+        Route::put('/{enterprise}', [AdminEnterpriseController::class, 'update'])->name('update');
+    });
 });
 
 Route::middleware(['auth', 'role:client'])->group(function () {
