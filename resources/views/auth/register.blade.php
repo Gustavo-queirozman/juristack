@@ -1,6 +1,7 @@
 <x-guest-layout>
     @php
         $isClientInvite = ($registrationType ?? 'office') === 'client' && isset($selectedEnterprise) && $selectedEnterprise;
+        $selectedPlan = $selectedPlan ?? null;
     @endphp
 
     <div class="space-y-6">
@@ -151,6 +152,20 @@
             <form method="POST" action="{{ route('register') }}" class="space-y-6">
                 @csrf
                 <input type="hidden" name="registration_type" value="office">
+                <input type="hidden" name="selected_plan" value="{{ old('selected_plan', $selectedPlan?->slug) }}">
+
+                @if($selectedPlan)
+                    <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+                        <p class="text-sm font-medium text-indigo-900">Plano selecionado</p>
+                        <div class="mt-1 flex flex-wrap items-baseline gap-2">
+                            <span class="text-base font-semibold text-gray-900">{{ $selectedPlan->name }}</span>
+                            <span class="text-sm text-indigo-700">{{ $selectedPlan->display_price }}{{ $selectedPlan->display_period }}</span>
+                        </div>
+                        @if($selectedPlan->description)
+                            <p class="mt-2 text-sm text-indigo-800">{{ $selectedPlan->description }}</p>
+                        @endif
+                    </div>
+                @endif
 
                 <div>
                     <x-input-label for="enterprise_name" value="Nome do escritorio" />
@@ -194,7 +209,7 @@
                     </a>
 
                     <x-primary-button>
-                        Criar escritorio
+                        {{ $selectedPlan ? 'Criar escritorio e continuar assinatura' : 'Criar escritorio' }}
                     </x-primary-button>
                 </div>
             </form>

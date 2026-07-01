@@ -7,8 +7,12 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FinancialEntryController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\BillingSettingController as AdminBillingSettingController;
 use App\Http\Controllers\Admin\EnterpriseController as AdminEnterpriseController;
+use App\Http\Controllers\Admin\SaasPlanController as AdminSaasPlanController;
+use App\Http\Controllers\Billing\CheckoutController;
 use App\Http\Controllers\OfficeAccessController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TaskController;
@@ -110,6 +114,19 @@ Route::middleware(['auth', 'role:admin'])->prefix('painel-administrativo')->name
         Route::get('/{enterprise}/edit', [AdminEnterpriseController::class, 'edit'])->name('edit');
         Route::put('/{enterprise}', [AdminEnterpriseController::class, 'update'])->name('update');
     });
+
+    Route::prefix('billing')->name('billing.')->group(function () {
+        Route::get('/stripe', [AdminBillingSettingController::class, 'edit'])->name('settings.edit');
+        Route::put('/stripe', [AdminBillingSettingController::class, 'update'])->name('settings.update');
+
+        Route::prefix('planos')->name('plans.')->group(function () {
+            Route::get('/', [AdminSaasPlanController::class, 'index'])->name('index');
+            Route::get('/create', [AdminSaasPlanController::class, 'create'])->name('create');
+            Route::post('/', [AdminSaasPlanController::class, 'store'])->name('store');
+            Route::get('/{plan}/edit', [AdminSaasPlanController::class, 'edit'])->name('edit');
+            Route::put('/{plan}', [AdminSaasPlanController::class, 'update'])->name('update');
+        });
+    });
 });
 
 Route::middleware(['auth', 'role:client'])->group(function () {
@@ -121,9 +138,13 @@ Route::middleware(['auth', 'role:client'])->group(function () {
         ->name('client.documents.download');
 });
 
-Route::get('/', function () {
-    return view('welcome');
+Route::middleware(['auth', 'role:admin,enterprise_admin'])->prefix('assinatura')->name('billing.')->group(function () {
+    Route::get('/checkout/{plan:slug}', [CheckoutController::class, 'create'])->name('checkout.start');
+    Route::get('/sucesso', [CheckoutController::class, 'success'])->name('subscription.success');
+    Route::get('/cancelado', [CheckoutController::class, 'cancel'])->name('subscription.cancel');
 });
+
+Route::get('/', HomeController::class)->name('home');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])

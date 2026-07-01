@@ -276,9 +276,43 @@
             </div>
         </div>
     @else
+        @if(session('success'))
+            <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('warning'))
+            <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {{ session('warning') }}
+            </div>
+        @endif
+
         <p class="mb-6 text-sm text-gray-600">
             Visao geral da sua conta. Acompanhe metricas e acesse rapidamente as principais areas.
         </p>
+
+        @if($enterpriseSubscription)
+            <div class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900">Assinatura do escritorio</p>
+                        <p class="mt-1 text-sm text-gray-600">
+                            {{ $enterpriseSubscription->subscriptionPlan?->name ?: 'Nenhum plano ativo' }}
+                            @if($enterpriseSubscription->subscription_status)
+                                <span class="font-medium text-gray-900">({{ $enterpriseSubscription->subscription_status }})</span>
+                            @endif
+                        </p>
+                        @if($enterpriseSubscription->subscription_ends_at)
+                            <p class="mt-1 text-xs text-gray-500">Renovacao ou encerramento em {{ $enterpriseSubscription->subscription_ends_at->format('d/m/Y') }}</p>
+                        @endif
+                    </div>
+                    <a href="{{ route('home') }}#precos" class="inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Ver planos
+                    </a>
+                </div>
+            </div>
+        @endif
 
         @if($inviteEnterprise)
             <div class="mb-6 rounded-xl border border-indigo-200 bg-indigo-50 p-4">

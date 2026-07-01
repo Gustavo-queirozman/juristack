@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\Customer;
 use App\Models\Enterprise;
+use App\Models\SaasPlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -33,6 +34,52 @@ class RegistrationTest extends TestCase
             ->assertSee('Portal do cliente')
             ->assertSee($enterprise->name)
             ->assertDontSee('Escritorio responsavel</label>', false);
+    }
+
+    public function test_registration_screen_displays_selected_plan_summary(): void
+    {
+        SaasPlan::create([
+            'name' => 'Professional',
+            'slug' => 'professional',
+            'description' => 'Ideal para escritorios em crescimento',
+            'price_cents' => 59700,
+            'currency' => 'brl',
+            'billing_interval' => 'month',
+            'interval_count' => 1,
+            'features' => ['Processos ilimitados'],
+            'is_active' => true,
+            'is_public' => true,
+        ]);
+
+        $response = $this->get('/register?plan=professional');
+
+        $response->assertOk()
+            ->assertSee('Plano selecionado')
+            ->assertSee('Professional')
+            ->assertSee('R$ 597,00');
+    }
+
+    public function test_homepage_displays_public_saas_plans(): void
+    {
+        SaasPlan::create([
+            'name' => 'Diamond',
+            'slug' => 'diamond',
+            'description' => 'Plano premium de alta escala',
+            'price_cents' => 129700,
+            'currency' => 'brl',
+            'billing_interval' => 'month',
+            'interval_count' => 1,
+            'features' => ['Atendimento prioritario 24h'],
+            'is_active' => true,
+            'is_public' => true,
+        ]);
+
+        $response = $this->get('/');
+
+        $response->assertOk()
+            ->assertSee('Diamond')
+            ->assertSee('R$ 1.297,00')
+            ->assertSee('Atendimento prioritario 24h');
     }
 
     public function test_new_office_users_can_register(): void

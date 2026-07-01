@@ -28,6 +28,7 @@ class DashboardController extends Controller
         $clientProcesses = collect();
         $clientProcessOptions = collect();
         $fileChecklist = collect();
+        $enterpriseSubscription = null;
 
         if ($isClient) {
             $customer = $user->customerProfile?->load(['files.processo', 'files.uploader']);
@@ -106,6 +107,7 @@ class DashboardController extends Controller
             $processosRecentes = ProcessoMonitor::orderByDesc('updated_at')->limit(5)->get();
             $ultimosClientes = Customer::latest()->limit(4)->get(['id', 'name', 'email', 'created_at']);
         } else {
+            $enterpriseSubscription = $user->enterprise()->with('subscriptionPlan')->first();
             $totalClientes = Customer::where('enterprise_id', $user->enterprise_id)->count();
             $totalProcessos = ProcessoMonitor::whereHas('usuario', function ($query) use ($user) {
                 $query->where('enterprise_id', $user->enterprise_id);
@@ -130,6 +132,7 @@ class DashboardController extends Controller
             'clientProcessOptions',
             'clientProcesses',
             'clientRecentDocumentRequests',
+            'enterpriseSubscription',
             'fileChecklist',
             'inviteEnterprise',
             'isClient',

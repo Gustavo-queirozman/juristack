@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -20,6 +21,15 @@ class Enterprise extends Model
         'email',
         'phone',
         'address',
+        'subscription_plan_id',
+        'stripe_customer_id',
+        'stripe_subscription_id',
+        'stripe_price_id',
+        'subscription_status',
+        'subscription_started_at',
+        'subscription_ends_at',
+        'trial_ends_at',
+        'subscription_canceled_at',
         'evolution_instance',
         'whatsapp_connection_status',
         'whatsapp_qr_code',
@@ -34,6 +44,10 @@ class Enterprise extends Model
         return [
             'whatsapp_connected_at' => 'datetime',
             'whatsapp_disconnected_at' => 'datetime',
+            'subscription_started_at' => 'datetime',
+            'subscription_ends_at' => 'datetime',
+            'trial_ends_at' => 'datetime',
+            'subscription_canceled_at' => 'datetime',
         ];
     }
 
@@ -55,6 +69,11 @@ class Enterprise extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    public function subscriptionPlan(): BelongsTo
+    {
+        return $this->belongsTo(SaasPlan::class, 'subscription_plan_id');
     }
 
     public function customers(): HasMany

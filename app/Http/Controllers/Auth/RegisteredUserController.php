@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerFile;
 use App\Models\Enterprise;
+use App\Models\SaasPlan;
 use App\Models\User;
 use App\Rules\CpfOuCnpjValido;
 use App\Rules\TelefoneCelularValido;
@@ -29,6 +30,9 @@ class RegisteredUserController extends Controller
         $selectedEnterprise = $enterpriseSlug
             ? Enterprise::query()->where('slug', $enterpriseSlug)->first()
             : null;
+        $selectedPlan = ! $selectedEnterprise && $request->filled('plan')
+            ? SaasPlan::query()->publicActive()->where('slug', $request->string('plan')->toString())->first()
+            : null;
 
         $registrationType = $selectedEnterprise ? 'client' : 'office';
 
@@ -36,6 +40,7 @@ class RegisteredUserController extends Controller
             'documentTypes' => CustomerFile::DOCUMENT_TYPES,
             'registrationType' => $registrationType,
             'selectedEnterprise' => $selectedEnterprise,
+            'selectedPlan' => $selectedPlan,
         ]);
     }
 
@@ -70,6 +75,7 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'selected_plan' => ['nullable', 'string', 'exists:saas_plans,slug'],
         ]);
 
         $enterprise = Enterprise::create([
@@ -94,6 +100,16 @@ class RegisteredUserController extends Controller
 
         $request->session()->regenerate();
         $request->session()->regenerateToken();
+
+        $selectedPlan = $this->resolveSelectedOfficePlan($request);
+
+        if ($selectedPlan && $selectedPlan->isCheckoutEnabled() && app(\App\Services\StripeBillingService::class)->isEnabled()) {
+            return redirect()->route('billing.checkout.start', $selectedPlan);
+        }
+
+        if ($selectedPlan) {
+            return to_route('dashboard')->with('warning', 'Escritorio criado. O plano selecionado ainda nao esta pronto para checkout automatico.');
+        }
 
         return to_route('dashboard');
     }
@@ -214,5 +230,17 @@ class RegisteredUserController extends Controller
                 'size' => $file->getSize(),
             ]);
         }
+    }
+
+    private function resolveSelectedOfficePlan(Request $request): ?SaasPlan
+    {
+        if (! $request->filled('selected_plan')) {
+            return null;
+        }
+
+        return SaasPlan::query()
+            ->publicActive()
+            ->where('slug', $request->string('selected_plan')->toString())
+            ->first();
     }
 }

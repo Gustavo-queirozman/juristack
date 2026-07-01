@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\BillingSetting;
 use App\Models\Enterprise;
+use App\Models\SaasPlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -74,5 +76,62 @@ class AdminPanelTest extends TestCase
             'role' => User::ROLE_ENTERPRISE_ADMIN,
             'is_active' => true,
         ]);
+    }
+
+    public function test_global_admin_can_update_stripe_credentials(): void
+    {
+        $admin = User::query()->where('email', 'admin@juristack.com.br')->firstOrFail();
+
+        $response = $this
+            ->actingAs($admin)
+            ->put(route('admin.billing.settings.update'), [
+                'stripe_publishable_key' => 'pk_test_123',
+                'stripe_secret_key' => 'sk_test_123',
+                'stripe_webhook_secret' => 'whsec_123',
+                'default_currency' => 'brl',
+                'is_stripe_enabled' => '1',
+            ]);
+
+        $response->assertRedirect();
+
+        $settings = BillingSetting::query()->firstOrFail();
+
+        $this->assertSame('pk_test_123', $settings->stripe_publishable_key);
+        $this->assertSame('sk_test_123', $settings->stripe_secret_key);
+        $this->assertSame('whsec_123', $settings->stripe_webhook_secret);
+        $this->assertTrue($settings->is_stripe_enabled);
+    }
+
+    public function test_global_admin_can_create_saas_plan(): void
+    {
+        $admin = User::query()->where('email', 'admin@juristack.com.br')->firstOrFail();
+
+        $response = $this
+            ->actingAs($admin)
+            ->post(route('admin.billing.plans.store'), [
+                'name' => 'Plano Starter',
+                'slug' => 'starter',
+                'description' => 'Plano inicial',
+                'price' => '297,00',
+                'currency' => 'brl',
+                'billing_interval' => 'month',
+                'interval_count' => 1,
+                'trial_days' => 14,
+                'button_label' => 'Assinar',
+                'features_text' => "Acesso ao painel\nSuporte por email",
+                'sort_order' => 1,
+                'is_active' => '1',
+                'is_public' => '1',
+                'is_featured' => '1',
+            ]);
+
+        $response->assertRedirect(route('admin.billing.plans.index'));
+
+        $plan = SaasPlan::query()->where('slug', 'starter')->firstOrFail();
+
+        $this->assertSame(29700, $plan->price_cents);
+        $this->assertSame(['Acesso ao painel', 'Suporte por email'], $plan->features);
+        $this->assertTrue($plan->is_public);
+        $this->assertTrue($plan->is_featured);
     }
 }

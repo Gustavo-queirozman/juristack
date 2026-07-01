@@ -178,6 +178,8 @@
                 'popular' => false,
             ],
         ];
+
+        $publicPlans = $publicPlans ?? collect();
         @endphp
 
         <!-- Navigation -->
@@ -482,9 +484,9 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                    @foreach($plans as $plan)
-                    <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm p-8 relative hover:shadow-lg transition-all duration-300 {{ $plan['popular'] ? 'border-secondary border-2 shadow-lg scale-105' : 'border-border' }}">
-                        @if($plan['popular'])
+                    @forelse($publicPlans as $plan)
+                    <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm p-8 relative hover:shadow-lg transition-all duration-300 {{ $plan->is_featured ? 'border-secondary border-2 shadow-lg scale-105' : 'border-border' }}">
+                        @if($plan->is_featured)
                         <div class="absolute -top-4 left-1/2 -translate-x-1/2">
                             <span class="bg-secondary text-secondary-foreground px-4 py-1 rounded-full text-sm font-semibold">
                                 Mais Popular
@@ -493,18 +495,18 @@
                         @endif
 
                         <div class="text-center mb-6">
-                            <h3 class="text-2xl font-bold mb-2 text-card-foreground">{{ $plan['name'] }}</h3>
-                            <p class="text-sm text-muted-foreground mb-4">{{ $plan['description'] }}</p>
+                            <h3 class="text-2xl font-bold mb-2 text-card-foreground">{{ $plan->name }}</h3>
+                            <p class="text-sm text-muted-foreground mb-4">{{ $plan->description }}</p>
                             <div class="flex items-end justify-center gap-1">
-                                <span class="text-4xl font-bold text-card-foreground">{{ $plan['price'] }}</span>
-                                @if($plan['period'])
-                                <span class="text-muted-foreground mb-1">{{ $plan['period'] }}</span>
+                                <span class="text-4xl font-bold text-card-foreground">{{ $plan->display_price }}</span>
+                                @if($plan->display_period)
+                                <span class="text-muted-foreground mb-1">{{ $plan->display_period }}</span>
                                 @endif
                             </div>
                         </div>
 
                         <ul class="space-y-3 mb-8">
-                            @foreach($plan['features'] as $feature)
+                            @foreach($plan->features ?? [] as $feature)
                             <li class="flex items-start gap-3">
                                 <svg class="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -514,11 +516,21 @@
                             @endforeach
                         </ul>
 
-                        <button class="w-full h-10 rounded-md px-6 font-medium transition-all {{ $plan['popular'] ? 'bg-secondary text-secondary-foreground hover:bg-secondary/90' : 'bg-primary text-primary-foreground hover:bg-primary/90' }}">
-                            {{ $plan['cta'] }}
-                        </button>
+                        @if($plan->contact_only)
+                        <a href="mailto:contato@juristech.com.br?subject={{ rawurlencode('Interesse no plano '.$plan->name) }}" class="w-full h-10 rounded-md px-6 font-medium transition-all inline-flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90">
+                            {{ $plan->checkout_button_label }}
+                        </a>
+                        @else
+                        <a href="{{ route('register', ['plan' => $plan->slug]) }}" class="w-full h-10 rounded-md px-6 font-medium transition-all inline-flex items-center justify-center {{ $plan->is_featured ? 'bg-secondary text-secondary-foreground hover:bg-secondary/90' : 'bg-primary text-primary-foreground hover:bg-primary/90' }}">
+                            {{ $plan->checkout_button_label }}
+                        </a>
+                        @endif
                     </div>
-                    @endforeach
+                    @empty
+                    <div class="md:col-span-3 rounded-xl border border-dashed border-gray-300 bg-white/70 px-6 py-10 text-center text-sm text-gray-500">
+                        Nenhum plano publico foi cadastrado ainda.
+                    </div>
+                    @endforelse
                 </div>
             </div>
         </section>

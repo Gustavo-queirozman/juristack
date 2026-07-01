@@ -42,6 +42,18 @@
                 </span>
                 <span>Painel administrativo</span>
             </a>
+            <a href="{{ route('admin.billing.plans.index') }}" class="sidebar-link {{ request()->routeIs('admin.billing.plans.*') ? 'sidebar-link-active' : '' }}">
+                <span class="sidebar-link-icon" aria-hidden="true">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 .895-4 2s1.79 2 4 2 4 .895 4 2-1.79 2-4 2m0-10V4m0 14v2m9-8a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </span>
+                <span>Planos SaaS</span>
+            </a>
+            <a href="{{ route('admin.billing.settings.edit') }}" class="sidebar-link {{ request()->routeIs('admin.billing.settings.*') ? 'sidebar-link-active' : '' }}">
+                <span class="sidebar-link-icon" aria-hidden="true">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3a.75.75 0 01.75.75V5h3V3.75a.75.75 0 011.5 0V5h.75A2.25 2.25 0 0118 7.25v9.5A2.25 2.25 0 0115.75 19h-7.5A2.25 2.25 0 016 16.75v-9.5A2.25 2.25 0 018.25 5H9V3.75A.75.75 0 019.75 3zM8.25 6.5a.75.75 0 00-.75.75v9.5c0 .414.336.75.75.75h7.5a.75.75 0 00.75-.75v-9.5a.75.75 0 00-.75-.75h-7.5zM9 10.25a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 019 10.25zm0 3a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 019 13.25z"/></svg>
+                </span>
+                <span>Credenciais Stripe</span>
+            </a>
         </div>
         @endif
         @unless($isClientUser)
