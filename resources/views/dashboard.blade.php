@@ -242,9 +242,8 @@
             <div class="divide-y divide-gray-100">
                 @forelse($clientProcesses as $process)
                     @php
-                        $latestMovement = $process->latestMovement;
-                        $statusLabel = $latestMovement?->nome ?: 'Em acompanhamento';
-                        $statusDate = $latestMovement?->data_hora ?: $process->datahora_ultima_atualizacao ?: $process->updated_at;
+                        $statusLabel = $process->latest_movement_name ?: 'Em acompanhamento';
+                        $statusDate = $process->latest_movement_date ?: $process->datahora_ultima_atualizacao ?: $process->updated_at;
                         $updatedAt = $process->datahora_ultima_atualizacao ?: $process->updated_at;
                     @endphp
                     <div class="px-4 py-4">
@@ -262,9 +261,10 @@
                                 </p>
                             </div>
                             <div class="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 lg:min-w-[240px]">
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-600">Ultimo status</p>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-600">Ultimo status do processo</p>
                                 <p class="mt-1 text-sm font-medium text-indigo-900">{{ $statusLabel }}</p>
                                 <p class="mt-1 text-xs text-indigo-700">
+                                    Ultima movimentacao:
                                     {{ $statusDate?->format('d/m/Y H:i') ?: 'Sem movimentacao detalhada' }}
                                 </p>
                             </div>

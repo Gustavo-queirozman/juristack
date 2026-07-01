@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\CustomerDocumentRequest;
 use App\Models\CustomerFile;
+use App\Models\DatajudMovimento;
 use App\Models\DatajudProcesso;
 use App\Models\Document;
 use App\Models\ProcessoMonitor;
@@ -67,8 +68,19 @@ class DashboardController extends Controller
                         $processo->grau,
                     ]))
                     ->values();
+                $latestMovementBaseQuery = DatajudMovimento::query()
+                    ->whereColumn('processo_id', 'datajud_processos.id')
+                    ->orderByRaw('case when data_hora is null then 1 else 0 end')
+                    ->orderByDesc('data_hora')
+                    ->orderByDesc('id');
                 $clientProcesses = DatajudProcesso::query()
-                    ->with('latestMovement')
+                    ->addSelect([
+                        'latest_movement_name' => (clone $latestMovementBaseQuery)->select('nome')->limit(1),
+                        'latest_movement_date' => (clone $latestMovementBaseQuery)->select('data_hora')->limit(1),
+                    ])
+                    ->withCasts([
+                        'latest_movement_date' => 'datetime',
+                    ])
                     ->where('customer_id', $customer->id)
                     ->latest('updated_at')
                     ->limit(8)

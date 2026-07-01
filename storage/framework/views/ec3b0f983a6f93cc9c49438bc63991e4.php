@@ -291,9 +291,8 @@ unset($__errorArgs, $__bag); ?>
             <div class="divide-y divide-gray-100">
                 <?php $__empty_1 = true; $__currentLoopData = $clientProcesses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $process): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                     <?php
-                        $latestMovement = $process->latestMovement;
-                        $statusLabel = $latestMovement?->nome ?: 'Em acompanhamento';
-                        $statusDate = $latestMovement?->data_hora ?: $process->datahora_ultima_atualizacao ?: $process->updated_at;
+                        $statusLabel = $process->latest_movement_name ?: 'Em acompanhamento';
+                        $statusDate = $process->latest_movement_date ?: $process->datahora_ultima_atualizacao ?: $process->updated_at;
                         $updatedAt = $process->datahora_ultima_atualizacao ?: $process->updated_at;
                     ?>
                     <div class="px-4 py-4">
@@ -314,9 +313,10 @@ unset($__errorArgs, $__bag); ?>
                                 </p>
                             </div>
                             <div class="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 lg:min-w-[240px]">
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-600">Ultimo status</p>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-600">Ultimo status do processo</p>
                                 <p class="mt-1 text-sm font-medium text-indigo-900"><?php echo e($statusLabel); ?></p>
                                 <p class="mt-1 text-xs text-indigo-700">
+                                    Ultima movimentacao:
                                     <?php echo e($statusDate?->format('d/m/Y H:i') ?: 'Sem movimentacao detalhada'); ?>
 
                                 </p>

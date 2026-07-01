@@ -99,6 +99,9 @@
                                     <p class="m-0"><span class="font-medium text-gray-700">Cliente:</span> <?php echo e($processo->customer->name); ?></p>
                                     <p class="m-0"><span class="font-medium text-gray-700">CPF/CNPJ:</span> <?php echo e($processo->customer->cnp); ?></p>
                                 <?php endif; ?>
+                                <?php if($processo->responsibleLawyer): ?>
+                                    <p class="m-0"><span class="font-medium text-gray-700">Advogado responsavel:</span> <?php echo e($processo->responsibleLawyer->name); ?></p>
+                                <?php endif; ?>
                                 <?php if($processo->orgao_julgador_nome): ?>
                                     <p class="m-0"><span class="font-medium text-gray-700">Juízo:</span> <?php echo e($processo->orgao_julgador_nome); ?></p>
                                 <?php endif; ?>

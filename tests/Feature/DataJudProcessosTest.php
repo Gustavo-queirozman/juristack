@@ -208,8 +208,50 @@ class DataJudProcessosTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk()
-            ->assertSee('Ultimo status')
+            ->assertSee('Ultimo status do processo')
+            ->assertSee('Ultima movimentacao:')
             ->assertSee('Concluso para julgamento')
+            ->assertSee('0001234-56.2023.8.13.0001');
+    }
+
+    public function test_dashboard_do_cliente_exibe_movimentacao_mesmo_sem_data_hora(): void
+    {
+        $enterprise = Enterprise::create(['name' => 'Empresa Teste']);
+        $clientUser = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_CLIENT,
+        ]);
+
+        $customer = Customer::create([
+            'enterprise_id' => $enterprise->id,
+            'user_id' => $clientUser->id,
+            'name' => 'Maria da Silva',
+            'email' => $clientUser->email,
+        ]);
+
+        $processo = DatajudProcesso::create([
+            'user_id' => $clientUser->id,
+            'enterprise_id' => $enterprise->id,
+            'customer_id' => $customer->id,
+            'tribunal' => 'TJMG',
+            'numero_processo' => '0001234-56.2023.8.13.0001',
+            'grau' => 'G1',
+            'payload' => [],
+        ]);
+
+        DatajudMovimento::create([
+            'processo_id' => $processo->id,
+            'nome' => 'Processo remetido a contadoria',
+            'data_hora' => null,
+        ]);
+
+        $response = $this
+            ->actingAs($clientUser)
+            ->get(route('dashboard'));
+
+        $response->assertOk()
+            ->assertSee('Ultimo status do processo')
+            ->assertSee('Processo remetido a contadoria')
             ->assertSee('0001234-56.2023.8.13.0001');
     }
 
