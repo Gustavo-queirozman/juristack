@@ -121,9 +121,14 @@ class User extends Authenticatable
 
     public function routeNotificationForWhatsApp(?Notification $notification = null): ?string
     {
-        return $this->customerProfile?->mobile_phone
-            ?: $this->customerProfile?->phone
-            ?: $this->enterprise?->phone;
+        $customerPhone = $this->customerProfile?->mobile_phone
+            ?: $this->customerProfile?->phone;
+
+        if ($this->isClient()) {
+            return $customerPhone;
+        }
+
+        return $customerPhone ?: $this->enterprise?->phone;
     }
 
     public function sendPasswordResetNotification($token): void

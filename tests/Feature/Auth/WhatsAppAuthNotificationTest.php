@@ -80,4 +80,36 @@ class WhatsAppAuthNotificationTest extends TestCase
                 && str_contains($request['text'], 'confirme seu e-mail');
         });
     }
+
+    public function test_client_notification_does_not_fall_back_to_enterprise_phone_when_customer_has_no_whatsapp(): void
+    {
+        Http::fake([
+            '*' => Http::response(['status' => 'ok'], 200),
+        ]);
+
+        config()->set('services.evolution.base_url', 'https://evolution.test');
+        config()->set('services.evolution.instance', 'juristack');
+        config()->set('services.evolution.api_key', 'secret');
+
+        $enterprise = Enterprise::create([
+            'name' => 'Empresa Teste',
+            'phone' => '31977776666',
+        ]);
+        $user = User::factory()->unverified()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_CLIENT,
+            'name' => 'Maria da Silva',
+        ]);
+
+        Customer::create([
+            'user_id' => $user->id,
+            'enterprise_id' => $enterprise->id,
+            'name' => $user->name,
+            'email' => $user->email,
+        ]);
+
+        $user->sendEmailVerificationNotification();
+
+        Http::assertNothingSent();
+    }
 }

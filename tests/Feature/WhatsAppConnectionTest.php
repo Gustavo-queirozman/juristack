@@ -27,6 +27,23 @@ class WhatsAppConnectionTest extends TestCase
         $response->assertSee('Empresa Teste');
     }
 
+    public function test_whatsapp_qr_code_is_rendered_with_maximum_size_of_200_pixels(): void
+    {
+        $enterprise = Enterprise::create([
+            'name' => 'Empresa Teste',
+            'whatsapp_qr_code' => 'data:image/png;base64,'.str_repeat('a', 240),
+        ]);
+        $admin = User::factory()->create([
+            'enterprise_id' => $enterprise->id,
+            'role' => User::ROLE_ENTERPRISE_ADMIN,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('whatsapp.connection.show'));
+
+        $response->assertOk();
+        $response->assertSee('max-h-[200px] max-w-[200px]', false);
+    }
+
     public function test_client_cannot_view_whatsapp_connection_screen(): void
     {
         $enterprise = Enterprise::create(['name' => 'Empresa Teste']);

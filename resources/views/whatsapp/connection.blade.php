@@ -125,9 +125,9 @@
                 <h2 class="text-base font-semibold text-gray-900">QR Code</h2>
                 <p class="mt-1 text-sm text-gray-500">Abra o WhatsApp no celular do escritorio e escaneie o codigo.</p>
 
-                <div class="mt-5 flex aspect-square items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
+                <div class="mt-5 flex min-h-[240px] items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
                     @if($enterprise->whatsapp_qr_code)
-                        <img src="{{ $enterprise->whatsapp_qr_code }}" alt="QR Code para conectar WhatsApp" class="h-full w-full object-contain">
+                        <img src="{{ $enterprise->whatsapp_qr_code }}" alt="QR Code para conectar WhatsApp" class="max-h-[200px] max-w-[200px] h-auto w-auto object-contain">
                     @elseif($isConnected)
                         <div class="text-center">
                             <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">

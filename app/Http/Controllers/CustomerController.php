@@ -93,7 +93,7 @@ class CustomerController extends Controller
         if ($customer && $serviceContractPayload !== null) {
             try {
                 app(ServiceContractService::class)->createAndSend($customer->fresh(['enterprise', 'user']), $actor, $serviceContractPayload);
-                $successMessage = 'Cliente cadastrado com sucesso e contrato enviado para assinatura por e-mail.';
+                $successMessage = 'Cliente cadastrado com sucesso e contrato enviado para assinatura por e-mail e, quando disponivel, por WhatsApp.';
             } catch (\Throwable $exception) {
                 Log::error('Falha ao gerar/enviar contrato de prestacao de servicos.', [
                     'customer_id' => $customer->id,
@@ -304,10 +304,11 @@ class CustomerController extends Controller
         $documentRequest->loadMissing(['customer.user', 'processo']);
 
         $notified = $this->notifyCustomerDocumentRequest($documentRequest);
+        $channels = $this->customerNotificationChannels($customer);
 
         $message = $notified
-            ? 'Solicitacao registrada e cliente notificado por e-mail.'
-            : 'Solicitacao registrada, mas o cliente nao possui e-mail para notificacao.';
+            ? 'Solicitacao registrada e cliente notificado por '.$this->humanizeNotificationChannels($channels).'.'
+            : 'Solicitacao registrada, mas o cliente nao possui contato para notificacao.';
 
         return redirect()
             ->route('customers.show', $customer)
@@ -355,7 +356,7 @@ class CustomerController extends Controller
 
         return redirect()
             ->route('customers.show', $customer)
-            ->with('success', 'Contrato de prestacao de servicos enviado para assinatura por e-mail.');
+            ->with('success', 'Contrato de prestacao de servicos enviado para assinatura por e-mail e, quando disponivel, por WhatsApp.');
     }
 
     public function uploadFiles(Request $request)
@@ -820,6 +821,36 @@ class CustomerController extends Controller
         $documentRequest->forceFill(['notified_at' => now()])->save();
 
         return true;
+    }
+
+    private function customerNotificationChannels(Customer $customer): array
+    {
+        $channels = [];
+
+        if (filled($customer->user?->email ?: $customer->email)) {
+            $channels[] = 'e-mail';
+        }
+
+        if (filled($customer->mobile_phone ?: $customer->phone)) {
+            $channels[] = 'WhatsApp';
+        }
+
+        return $channels;
+    }
+
+    private function humanizeNotificationChannels(array $channels): string
+    {
+        if ($channels === []) {
+            return 'nenhum canal';
+        }
+
+        if (count($channels) === 1) {
+            return $channels[0];
+        }
+
+        $lastChannel = array_pop($channels);
+
+        return implode(', ', $channels).' e '.$lastChannel;
     }
 
     private function fulfillMatchingDocumentRequests(

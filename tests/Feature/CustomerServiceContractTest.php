@@ -50,7 +50,7 @@ class CustomerServiceContractTest extends TestCase
         ]);
 
         $response->assertRedirect(route('customers.index'));
-        $response->assertSessionHas('success', 'Cliente cadastrado com sucesso e contrato enviado para assinatura por e-mail.');
+        $response->assertSessionHas('success', 'Cliente cadastrado com sucesso e contrato enviado para assinatura por e-mail e, quando disponivel, por WhatsApp.');
 
         $customer = Customer::where('email', 'maria@example.com')->firstOrFail();
         $document = Document::where('customer_id', $customer->id)->firstOrFail();
@@ -157,7 +157,7 @@ class CustomerServiceContractTest extends TestCase
         ]);
 
         $response->assertRedirect(route('customers.show', $customer));
-        $response->assertSessionHas('success', 'Contrato de prestacao de servicos enviado para assinatura por e-mail.');
+        $response->assertSessionHas('success', 'Contrato de prestacao de servicos enviado para assinatura por e-mail e, quando disponivel, por WhatsApp.');
 
         $document = Document::where('customer_id', $customer->id)->firstOrFail();
         $this->assertSame('enterprise', $document->service_contract_signer_type);
