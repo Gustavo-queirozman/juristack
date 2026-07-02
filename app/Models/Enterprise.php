@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class Enterprise extends Model
@@ -30,6 +31,9 @@ class Enterprise extends Model
         'subscription_ends_at',
         'trial_ends_at',
         'subscription_canceled_at',
+        'payment_overdue_since',
+        'last_payment_overdue_reminder_at',
+        'last_payment_overdue_reminder_stage',
         'evolution_instance',
         'whatsapp_connection_status',
         'whatsapp_qr_code',
@@ -48,6 +52,9 @@ class Enterprise extends Model
             'subscription_ends_at' => 'datetime',
             'trial_ends_at' => 'datetime',
             'subscription_canceled_at' => 'datetime',
+            'payment_overdue_since' => 'datetime',
+            'last_payment_overdue_reminder_at' => 'datetime',
+            'last_payment_overdue_reminder_stage' => 'integer',
         ];
     }
 
@@ -84,6 +91,25 @@ class Enterprise extends Model
     public function financialEntries(): HasMany
     {
         return $this->hasMany(FinancialEntry::class);
+    }
+
+    public function billingRecipientUsers(): Collection
+    {
+        $primaryRecipients = $this->users()
+            ->where('is_active', true)
+            ->where('role', User::ROLE_ENTERPRISE_ADMIN)
+            ->orderBy('id')
+            ->get();
+
+        if ($primaryRecipients->isNotEmpty()) {
+            return $primaryRecipients;
+        }
+
+        return $this->users()
+            ->where('is_active', true)
+            ->whereIn('role', User::INTERNAL_ROLES)
+            ->orderBy('id')
+            ->get();
     }
 
     public static function generateUniqueSlug(string $name, ?int $ignoreId = null): string

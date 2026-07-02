@@ -20,6 +20,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('financial:send-whatsapp-reminders')
                  ->dailyAt('08:00')
                  ->withoutOverlapping();
+        $schedule->command('billing:send-overdue-payment-reminders')
+                 ->dailyAt('09:00')
+                 ->withoutOverlapping();
 
         // Opcional: Executar também a cada hora para testes
         // $schedule->command('datajud:monitor-updates --limit=10')

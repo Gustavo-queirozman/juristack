@@ -8,8 +8,10 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
+use Stripe\BillingPortal\Session as BillingPortalSession;
 use Stripe\Checkout\Session;
 use Stripe\Exception\ApiErrorException;
+use Stripe\Invoice;
 use Stripe\Price;
 use Stripe\Product;
 use Stripe\StripeClient;
@@ -19,6 +21,7 @@ class StripeBillingService
 {
     public function __construct(
         private readonly StripeSettingsService $settingsService,
+        private readonly SubscriptionBillingReminderService $reminderService,
     ) {
     }
 
@@ -136,6 +139,18 @@ class StripeBillingService
         return $this->client()->checkout->sessions->retrieve($sessionId, []);
     }
 
+    public function createBillingPortalSession(Enterprise $enterprise, string $returnUrl): BillingPortalSession
+    {
+        if (! $enterprise->stripe_customer_id) {
+            throw new InvalidArgumentException('A empresa ainda nao possui cliente Stripe vinculado.');
+        }
+
+        return $this->client()->billingPortal->sessions->create([
+            'customer' => $enterprise->stripe_customer_id,
+            'return_url' => $returnUrl,
+        ]);
+    }
+
     public function syncEnterpriseFromSubscriptionId(string $subscriptionId): ?Enterprise
     {
         $subscription = $this->client()->subscriptions->retrieve($subscriptionId, []);
@@ -157,6 +172,46 @@ class StripeBillingService
     public function handleSubscriptionUpdated(Subscription $subscription): ?Enterprise
     {
         return $this->syncEnterpriseFromSubscription($subscription);
+    }
+
+    public function handleInvoicePaymentFailed(Invoice $invoice): ?Enterprise
+    {
+        $enterprise = $this->findEnterpriseForStripeReferences(
+            $this->stripeString($invoice->customer),
+            $this->stripeString($invoice->subscription),
+            isset($invoice->metadata->enterprise_id) ? (int) $invoice->metadata->enterprise_id : null,
+        );
+
+        if (! $enterprise) {
+            Log::warning('Falha de pagamento Stripe recebida sem empresa correspondente.', [
+                'stripe_invoice_id' => $invoice->id,
+                'stripe_subscription_id' => $invoice->subscription,
+                'stripe_customer_id' => $invoice->customer,
+            ]);
+
+            return null;
+        }
+
+        $overdueSince = $this->timestampToCarbon($invoice->due_date)
+            ?: $this->timestampToCarbon($invoice->created)
+            ?: now()->toImmutable();
+
+        return $this->reminderService->markAsOverdue($enterprise, $overdueSince);
+    }
+
+    public function handleInvoicePaid(Invoice $invoice): ?Enterprise
+    {
+        $enterprise = $this->findEnterpriseForStripeReferences(
+            $this->stripeString($invoice->customer),
+            $this->stripeString($invoice->subscription),
+            isset($invoice->metadata->enterprise_id) ? (int) $invoice->metadata->enterprise_id : null,
+        );
+
+        if (! $enterprise) {
+            return null;
+        }
+
+        return $this->reminderService->clearOverdueState($enterprise);
     }
 
     public function client(): StripeClient
@@ -225,21 +280,11 @@ class StripeBillingService
             ? (int) $subscription->metadata->enterprise_id
             : null;
 
-        $enterprise = Enterprise::query()
-            ->where(function ($query) use ($enterpriseId, $subscription): void {
-                if ($enterpriseId) {
-                    $query->orWhereKey($enterpriseId);
-                }
-
-                if ($subscription->customer) {
-                    $query->orWhere('stripe_customer_id', (string) $subscription->customer);
-                }
-
-                if ($subscription->id) {
-                    $query->orWhere('stripe_subscription_id', (string) $subscription->id);
-                }
-            })
-            ->first();
+        $enterprise = $this->findEnterpriseForStripeReferences(
+            $this->stripeString($subscription->customer),
+            $subscription->id,
+            $enterpriseId,
+        );
 
         if (! $enterprise) {
             Log::warning('Webhook Stripe recebido sem empresa correspondente.', [
@@ -254,20 +299,60 @@ class StripeBillingService
         $plan = $priceId
             ? SaasPlan::query()->where('stripe_price_id', $priceId)->first()
             : null;
+        $status = (string) $subscription->status;
+        $subscriptionEndsAt = $this->timestampToCarbon($subscription->current_period_end);
 
-        $enterprise->forceFill([
+        $updates = [
             'subscription_plan_id' => $plan?->id,
             'stripe_customer_id' => (string) $subscription->customer,
             'stripe_subscription_id' => $subscription->id,
             'stripe_price_id' => $priceId,
-            'subscription_status' => $subscription->status,
+            'subscription_status' => $status,
             'subscription_started_at' => $this->timestampToCarbon($subscription->start_date),
-            'subscription_ends_at' => $this->timestampToCarbon($subscription->current_period_end),
+            'subscription_ends_at' => $subscriptionEndsAt,
             'trial_ends_at' => $this->timestampToCarbon($subscription->trial_end),
             'subscription_canceled_at' => $this->timestampToCarbon($subscription->cancel_at),
-        ])->save();
+        ];
+
+        if (in_array($status, $this->reminderService->overdueStatuses(), true)) {
+            $updates['payment_overdue_since'] = $enterprise->payment_overdue_since
+                ?: $subscriptionEndsAt
+                ?: now()->toImmutable();
+        } else {
+            $updates['payment_overdue_since'] = null;
+            $updates['last_payment_overdue_reminder_at'] = null;
+            $updates['last_payment_overdue_reminder_stage'] = null;
+        }
+
+        $enterprise->forceFill($updates)->save();
 
         return $enterprise->refresh();
+    }
+
+    private function findEnterpriseForStripeReferences(
+        ?string $customerId,
+        ?string $subscriptionId = null,
+        ?int $enterpriseId = null,
+    ): ?Enterprise {
+        if (! $enterpriseId && ! $customerId && ! $subscriptionId) {
+            return null;
+        }
+
+        return Enterprise::query()
+            ->where(function ($query) use ($customerId, $subscriptionId, $enterpriseId): void {
+                if ($enterpriseId) {
+                    $query->orWhereKey($enterpriseId);
+                }
+
+                if ($customerId) {
+                    $query->orWhere('stripe_customer_id', $customerId);
+                }
+
+                if ($subscriptionId) {
+                    $query->orWhere('stripe_subscription_id', $subscriptionId);
+                }
+            })
+            ->first();
     }
 
     private function extractPriceIdFromSubscription(Subscription $subscription): ?string
@@ -290,5 +375,18 @@ class StripeBillingService
         }
 
         return CarbonImmutable::createFromTimestamp((int) $timestamp);
+    }
+
+    private function stripeString(mixed $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            return $value;
+        }
+
+        return $value->id ?? null;
     }
 }

@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Stripe\Checkout\Session;
 use Stripe\Event;
 use Stripe\Exception\SignatureVerificationException;
+use Stripe\Invoice;
 use Stripe\StripeObject;
 use Stripe\Subscription;
 use Stripe\Webhook;
@@ -55,6 +56,8 @@ class StripeWebhookController extends Controller
             'customer.subscription.created',
             'customer.subscription.updated',
             'customer.subscription.deleted' => $this->stripeBilling->handleSubscriptionUpdated($this->toSubscription($object)),
+            'invoice.payment_failed' => $this->stripeBilling->handleInvoicePaymentFailed($this->toInvoice($object)),
+            'invoice.paid' => $this->stripeBilling->handleInvoicePaid($this->toInvoice($object)),
             default => null,
         };
     }
@@ -75,6 +78,15 @@ class StripeWebhookController extends Controller
         }
 
         return Subscription::constructFrom($this->toArray($object));
+    }
+
+    private function toInvoice(mixed $object): Invoice
+    {
+        if ($object instanceof Invoice) {
+            return $object;
+        }
+
+        return Invoice::constructFrom($this->toArray($object));
     }
 
     private function toArray(mixed $object): array

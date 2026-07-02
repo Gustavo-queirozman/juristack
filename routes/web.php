@@ -142,6 +142,7 @@ Route::middleware(['auth', 'role:admin,enterprise_admin'])->prefix('assinatura')
     Route::get('/checkout/{plan:slug}', [CheckoutController::class, 'create'])->name('checkout.start');
     Route::get('/sucesso', [CheckoutController::class, 'success'])->name('subscription.success');
     Route::get('/cancelado', [CheckoutController::class, 'cancel'])->name('subscription.cancel');
+    Route::get('/portal', [CheckoutController::class, 'portal'])->name('portal.start');
 });
 
 Route::get('/', HomeController::class)->name('home');

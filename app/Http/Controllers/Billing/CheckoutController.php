@@ -7,6 +7,7 @@ use App\Models\SaasPlan;
 use App\Services\StripeBillingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class CheckoutController extends Controller
 {
@@ -52,5 +53,32 @@ class CheckoutController extends Controller
         return redirect()
             ->route('dashboard')
             ->with('warning', 'Checkout cancelado. Voce pode tentar novamente a qualquer momento.');
+    }
+
+    public function portal(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $enterprise = $user?->enterprise;
+
+        abort_if(! $user || ! $enterprise, 403);
+
+        if (! $this->stripeBilling->isEnabled() || ! $enterprise->stripe_customer_id) {
+            return redirect()
+                ->route('dashboard')
+                ->with('warning', 'A gestao da assinatura ainda nao esta disponivel para este escritorio.');
+        }
+
+        try {
+            $session = $this->stripeBilling->createBillingPortalSession(
+                $enterprise,
+                route('dashboard', absolute: true),
+            );
+        } catch (InvalidArgumentException) {
+            return redirect()
+                ->route('dashboard')
+                ->with('warning', 'Nao foi possivel abrir o portal de cobranca desta assinatura.');
+        }
+
+        return redirect()->away($session->url);
     }
 }
